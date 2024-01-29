@@ -1,0 +1,32 @@
+trigger: none
+
+pr:
+  autoCancel: true
+  paths:
+    exclude: 
+      - docs/*
+      - "*.md"
+  drafts: false
+
+stages:
+- stage: IronBank
+  pool:
+    vmImage: 'ubuntu-latest'
+  jobs:
+  - job:
+    steps:
+    - bash: |
+        docker login -u $(IB_UserName) -p $(IB_Password) registry1.dso.mil
+      displayName: Docker Login (IronBank)
+    - bash: |
+        docker login -u $(CLIENT_ID) -p $(CLIENT_SECRET) $(CONTAINER_REGISTRY_ADDRESS)
+      displayName: Docker Login (CF ACR)
+    # version / name is hardcoded.  Only needed here.  Will need to update if we pull different versions of base code
+    # OR we use build id
+    - bash: |
+        cd $(Build.SourcesDirectory)/ironbank/installer
+        docker build . -t $(CONTAINER_REGISTRY_ADDRESS)/info-asst-installer:1.0
+      displayName: Build Info-Asst-Installer
+    - bash: |
+        docker push $(CONTAINER_REGISTRY_ADDRESS)/info-asst-installer:1.0
+      displayName: Push Info-Asst-Installer

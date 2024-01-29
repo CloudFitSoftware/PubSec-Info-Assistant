@@ -1,0 +1,20 @@
+trigger: none
+
+pr:
+  autoCancel: true
+  branches:
+    exclude: [ master ]
+  paths:
+    exclude: 
+      - docs/*
+      - "*.md"
+  drafts: false
+
+stages:
+- stage: BuildIBContainer
+  pool:
+    vmImage: 'ubuntu-latest'
+  jobs:
+  - job:
+    steps:
+    - template: templates/build-template.yml

@@ -1,0 +1,71 @@
+steps:
+- bash: |
+    sudo chown -R $(whoami) .
+  displayName: Take ownership of Directory
+
+- checkout: self
+  clean: true
+
+- bash: |
+    cp $(Build.SourcesDirectory)/scripts/environments/local.env.example $(Build.SourcesDirectory)/scripts/environments/local.env
+  displayName: Copy Temporary ENV File
+
+- bash: |
+    docker login $(CONTAINER_REGISTRY_ADDRESS) -u $(CLIENT_ID) -p $(CLIENT_SECRET)
+    docker pull $(CONTAINER_REGISTRY_ADDRESS)/info-asst-devcontainer:latest
+  displayName: Pull latest dev container from container registry for layer caching
+  continueOnError: true # for first build, no cache
+
+- bash: |
+    set -e
+    docker build '$(Build.SourcesDirectory)/.devcontainer' \
+      -t 'info-asst-devcontainer:$(Build.BuildId)' \
+      -t 'info-asst-devcontainer:latest' \
+      -f '$(Build.SourcesDirectory)/.devcontainer/Dockerfile' \
+      --cache-from $(CONTAINER_REGISTRY_ADDRESS)/info-asst-devcontainer:latest \
+      --build-arg BUILDKIT_INLINE_CACHE=1 \
+      --build-arg USER_UID=$(id -u) \
+      --build-arg USER_GID=$(id -g)
+  displayName: Build dev container Docker Image
+
+- bash: |
+    set -e
+    docker image tag info-asst-devcontainer:latest $(CONTAINER_REGISTRY_ADDRESS)/info-asst-devcontainer:latest
+    docker image push $(CONTAINER_REGISTRY_ADDRESS)/info-asst-devcontainer:latest
+  displayName: ⬆️ Push latest dev container image to container registry
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+- template: make-command.yml
+  parameters:
+    displayName: 'Dev container take ownership of Directory'
+    makeCommand: 'take-dir-ownership'
+
+- template: make-command.yml
+  parameters:
+    displayName: 'Run make build'
+    makeCommand: 'build'
+
+- bash: |
+    set -e
+    cd $(Build.SourcesDirectory)
+    docker build . \
+      -f '$(Build.SourcesDirectory)/Dockerfile' \
+      -t 'info-asst-bootstrapper:latest' \
+      -t 'info-asst-bootstrapper:$(Build.BuildId)'
+  displayName: Create Bootstrapper Container
+
+- bash: |
+    set -e
+    docker image tag info-asst-bootstrapper:latest $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:latest
+    docker image tag info-asst-bootstrapper:latest $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:$(Build.BuildId)
+    docker image push $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:latest
+    docker image push $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:$(Build.BuildId)
+  displayName: ⬆️ Push Bootstrapper Image to Container Registry
+  condition: succeeded()
+
+# - task: PublishBuildArtifacts@1
+#   displayName: "⬆️ Publish All Artifacts"
+#   inputs:
+#     PathtoPublish: '$(Build.SourcesDirectory)/artifacts'
+#     ArtifactName: 'drop_BuildIBContainer'
+#     publishLocation: 'Container'

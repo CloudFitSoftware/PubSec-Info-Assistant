@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infoasst-webapp
+  namespace: infoasst
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: infoasst-webapp
+  template:
+    metadata:
+      labels:
+        app: infoasst-webapp
+    spec:
+      containers:
+      - name: infoasst-webapp
+        image: infoasstcruj3jp.azurecr.io/webapp:latest
+        env:
+          - name: APPINSIGHTS_INSTRUMENTATIONKEY
+            value: "6b047c02-6797-4d3c-b6f0-72c09eb164c1"
+          - name: APPLICATION_TITLE
+            value: ""
+          - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+            value: "InstrumentationKey=6b047c02-6797-4d3c-b6f0-72c09eb164c1;IngestionEndpoint=https://westus-0.in.applicationinsights.azure.com/;LiveEndpoint=https://westus.livediagnostics.monitor.azure.com/"
+          - name: AZURE_BLOB_STORAGE_ACCOUNT
+            value: "infoasststoreuj3jp"
+          - name: AZURE_BLOB_STORAGE_CONTAINER
+            value: "content"
+          - name: AZURE_BLOB_STORAGE_ENDPOINT
+            value: "https://infoasststoreuj3jp.blob.core.windows.net/"
+          - name: AZURE_BLOB_STORAGE_KEY
+            value: "EzYNdIPc2X9S2QBoaJ3xUebJAO1/IFJIAvh0geQHprHa16Ox9eq9hroXtObLHM4/UaUyY5WiJRzd+ASta4cMTw=="
+          - name: AZURE_BLOB_STORAGE_UPLOAD_CONTAINER
+            value: "upload"
+          - name: AZURE_CLIENT_ID
+            value: "22c2f3df-952c-4250-a65f-7dbb32e264f9"
+          - name: AZURE_CLIENT_SECRET
+            value: "NTT8Q~SWNtUDPtvxJP4JSBEJ1eSaJxhaRAe1DbpN"
+          - name: AZURE_KEY_VAULT_ENDPOINT
+            value: "https://infoasst-kv-uj3jp.vault.azure.net/"
+          - name: AZURE_OPENAI_CHATGPT_DEPLOYMENT
+            value: "gpt-35-turbo"
+          - name: AZURE_OPENAI_CHATGPT_MODEL_NAME
+            value: "gpt-35-turbo"
+          - name: AZURE_OPENAI_CHATGPT_MODEL_VERSION
+            value: "0301"
+          - name: AZURE_OPENAI_EMBEDDINGS_MODEL_NAME
+            value: ""
+          - name: AZURE_OPENAI_EMBEDDINGS_MODEL_VERSION
+            value: ""
+          - name: AZURE_OPENAI_RESOURCE_GROUP
+            value: ""
+          - name: AZURE_OPENAI_SERVICE
+            value: "infoasst-aoai-waht8"
+          - name: AZURE_OPENAI_SERVICE_KEY
+            value: "582a1dc0a21b4a67af357dc28571c8ac"
+          - name: AZURE_SEARCH_INDEX
+            value: "vector-index"
+          - name: AZURE_SEARCH_SERVICE
+            value: "infoasst-search-uj3jp"
+          - name: AZURE_SEARCH_SERVICE_ENDPOINT
+            value: "https://infoasst-search-uj3jp.search.windows.net/"
+          - name: AZURE_SEARCH_SERVICE_KEY
+            value: "An7qCqIL2acK2WF6JJ4yuKPBV7ccdYY48oJdCbwsxkAzSeDzbkvU"
+          - name: AZURE_SUBSCRIPTION_ID
+            value: "43c269cb-f045-4802-9b65-f63f1b0df1e6"
+          - name: AZURE_TENANT_ID
+            value: "b846a774-f39d-4a2d-9366-f3dda22c6bf0"
+          - name: CHAT_WARNING_BANNER_TEXT
+            value: ""
+          - name: COSMOSDB_KEY
+            value: "1baXVBW7KMcvKcMcmaz9EiQoMBuyVNATXxayjpgVwnrCpnm4bX8O3DADlNafWd1tiZQvTagEbDz9ACDbCIZHUg=="
+          - name: COSMOSDB_LOG_CONTAINER_NAME
+            value: "statuscontainer"
+          - name: COSMOSDB_LOG_DATABASE_NAME
+            value: "statusdb"
+          - name: COSMOSDB_TAGS_CONTAINER_NAME
+            value: "tagcontainer"
+          - name: COSMOSDB_TAGS_DATABASE_NAME
+            value: "tagdb"
+          - name: COSMOSDB_URL
+            value: "https://infoasst-cosmos-uj3jp.documents.azure.com:443/"
+          - name: EMBEDDING_DEPLOYMENT_NAME
+            value: "text-embedding-ada-002"
+          - name: ENABLE_ORYX_BUILD
+            value: "True"
+          - name: ENRICHMENT_APPSERVICE_NAME
+            value: "infoasst-enrichmentweb-uj3jp"
+          - name: IS_GOV_CLOUD_DEPLOYMENT
+            value: "False"
+          - name: QUERY_TERM_LANGUAGE
+            value: "English"
+          - name: SCM_DO_BUILD_DURING_DEPLOYMENT
+            value: "true"
+          - name: TARGET_EMBEDDINGS_MODEL
+            value: "azure-openai_text-embedding-ada-002"
+          - name: USE_AZURE_OPENAI_EMBEDDINGS
+            value: "True"
+          - name: WEBSITE_HTTPLOGGING_RETENTION_DAYS
+            value: "1"
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infoasst-webapp
+spec:
+  type: LoadBalancer
+  selector:
+    app: infoasst-webapp
+  ports:
+  - port: 8080
+    targetPort: 5000
