@@ -2,7 +2,6 @@
 # Licensed under the MIT license.
 
 import logging
-import mimetypes
 import os
 import json
 import urllib.parse
@@ -11,7 +10,11 @@ from datetime import datetime, timedelta
 import openai
 from approaches.chatreadretrieveread import ChatReadRetrieveReadApproach
 from azure.core.credentials import AzureKeyCredential
-from azure.identity import DefaultAzureCredential
+from azure.identity import (
+    AzureAuthorityHosts,
+    DefaultAzureCredential,
+    )
+from azure.keyvault.secrets import SecretClient
 from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 from azure.search.documents import SearchClient
 from azure.storage.blob import (
@@ -26,36 +29,26 @@ from shared_code.tags_helper import TagsHelper
 
 str_to_bool = {'true': True, 'false': False}
 # Replace these with your own values, either in environment variables or directly here
-AZURE_BLOB_STORAGE_ACCOUNT = (
-    os.environ.get("AZURE_BLOB_STORAGE_ACCOUNT") or "mystorageaccount"
-)
+AZURE_BLOB_STORAGE_ACCOUNT = (os.environ.get("AZURE_BLOB_STORAGE_ACCOUNT") or "mystorageaccount")
 AZURE_BLOB_STORAGE_ENDPOINT = os.environ.get("AZURE_BLOB_STORAGE_ENDPOINT") 
-AZURE_BLOB_STORAGE_KEY = os.environ.get("AZURE_BLOB_STORAGE_KEY")
-AZURE_BLOB_STORAGE_CONTAINER = (
-    os.environ.get("AZURE_BLOB_STORAGE_CONTAINER") or "content"
-)
+AZURE_BLOB_STORAGE_CONTAINER = (os.environ.get("AZURE_BLOB_STORAGE_CONTAINER") or "content")
+AZURE_KEYVAULT_NAME = os.environ.get("AZURE_KEYVAULT_NAME") or ""
 AZURE_SEARCH_SERVICE = os.environ.get("AZURE_SEARCH_SERVICE") or "gptkb"
 AZURE_SEARCH_SERVICE_ENDPOINT = os.environ.get("AZURE_SEARCH_SERVICE_ENDPOINT")
-AZURE_SEARCH_SERVICE_KEY = os.environ.get("AZURE_SEARCH_SERVICE_KEY")
 AZURE_SEARCH_INDEX = os.environ.get("AZURE_SEARCH_INDEX") or "gptkbindex"
 AZURE_OPENAI_SERVICE = os.environ.get("AZURE_OPENAI_SERVICE") or "myopenai"
 AZURE_OPENAI_RESOURCE_GROUP = os.environ.get("AZURE_OPENAI_RESOURCE_GROUP") or ""
-AZURE_OPENAI_CHATGPT_DEPLOYMENT = (
-    os.environ.get("AZURE_OPENAI_CHATGPT_DEPLOYMENT") or "gpt-35-turbo-16k"
-)
+AZURE_OPENAI_CHATGPT_DEPLOYMENT = (os.environ.get("AZURE_OPENAI_CHATGPT_DEPLOYMENT") or "gpt-35-turbo-16k")
 AZURE_OPENAI_CHATGPT_MODEL_NAME = ( os.environ.get("AZURE_OPENAI_CHATGPT_MODEL_NAME") or "")
 AZURE_OPENAI_CHATGPT_MODEL_VERSION = ( os.environ.get("AZURE_OPENAI_CHATGPT_MODEL_VERSION") or "")
-USE_AZURE_OPENAI_EMBEDDINGS = str_to_bool.get(os.environ.get("USE_AZURE_OPENAI_EMBEDDINGS").lower()) or False
+USE_AZURE_OPENAI_EMBEDDINGS = str_to_bool.get(os.environ.get("USE_AZURE_OPENAI_EMBEDDINGS", "").lower()) or False
 EMBEDDING_DEPLOYMENT_NAME = ( os.environ.get("EMBEDDING_DEPLOYMENT_NAME") or "")
 AZURE_OPENAI_EMBEDDINGS_MODEL_NAME = ( os.environ.get("AZURE_OPENAI_EMBEDDINGS_MODEL_NAME") or "")
 AZURE_OPENAI_EMBEDDINGS_VERSION = ( os.environ.get("AZURE_OPENAI_EMBEDDINGS_VERSION") or "")
-
-AZURE_OPENAI_SERVICE_KEY = os.environ.get("AZURE_OPENAI_SERVICE_KEY")
 AZURE_SUBSCRIPTION_ID = os.environ.get("AZURE_SUBSCRIPTION_ID")
-IS_GOV_CLOUD_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_GOV_CLOUD_DEPLOYMENT").lower()) or False
+IS_GOV_CLOUD_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_GOV_CLOUD_DEPLOYMENT", "").lower()) or False
 CHAT_WARNING_BANNER_TEXT = os.environ.get("CHAT_WARNING_BANNER_TEXT") or ""
 APPLICATION_TITLE = os.environ.get("APPLICATION_TITLE") or "Information Assistant, built with Azure OpenAI"
-
 
 KB_FIELDS_CONTENT = os.environ.get("KB_FIELDS_CONTENT") or "content"
 KB_FIELDS_PAGENUMBER = os.environ.get("KB_FIELDS_PAGENUMBER") or "pages"
@@ -63,7 +56,6 @@ KB_FIELDS_SOURCEFILE = os.environ.get("KB_FIELDS_SOURCEFILE") or "file_uri"
 KB_FIELDS_CHUNKFILE = os.environ.get("KB_FIELDS_CHUNKFILE") or "chunk_file"
 
 COSMOSDB_URL = os.environ.get("COSMOSDB_URL")
-COSMODB_KEY = os.environ.get("COSMOSDB_KEY")
 COSMOSDB_LOG_DATABASE_NAME = os.environ.get("COSMOSDB_LOG_DATABASE_NAME") or "statusdb"
 COSMOSDB_LOG_CONTAINER_NAME = os.environ.get("COSMOSDB_LOG_CONTAINER_NAME") or "statuscontainer"
 COSMOSDB_TAGS_DATABASE_NAME = os.environ.get("COSMOSDB_TAGS_DATABASE_NAME") or "tagsdb"
@@ -80,20 +72,37 @@ ENRICHMENT_APPSERVICE_NAME = os.environ.get("ENRICHMENT_APPSERVICE_NAME") or "en
 # just use 'az login' locally, and managed identity when deployed on Azure). If you need to use keys, use separate AzureKeyCredential instances with the
 # keys for each service
 # If you encounter a blocking error during a DefaultAzureCredntial resolution, you can exclude the problematic credential by using a parameter (ex. exclude_shared_token_cache_credential=True)
-azure_credential = DefaultAzureCredential()
+kv_uri = ''
+if (IS_GOV_CLOUD_DEPLOYMENT):
+    kv_uri = f"https://{AZURE_KEYVAULT_NAME}.vault.usgovcloudapi.net"
+    azure_credential = DefaultAzureCredential(authority=AzureAuthorityHosts.AZURE_GOVERNMENT)
+else:
+    kv_uri = f"https://{AZURE_KEYVAULT_NAME}.vault.azure.net"
+    azure_credential = DefaultAzureCredential()
+
+keyVaultClient = SecretClient(vault_url=kv_uri, credential=azure_credential)
+
+AZURE_BLOB_STORAGE_KEY = keyVaultClient.get_secret("AZURE-BLOB-STORAGE-KEY").value
+AZURE_OPENAI_SERVICE_KEY = keyVaultClient.get_secret("AZURE-OPENAI-SERVICE-KEY").value
+AZURE_SEARCH_SERVICE_KEY = keyVaultClient.get_secret("AZURE-SEARCH-SERVICE-KEY").value
+COSMOSDB_KEY = keyVaultClient.get_secret("COSMOSDB-KEY").value
+
 azure_search_key_credential = AzureKeyCredential(AZURE_SEARCH_SERVICE_KEY)
 
 # Used by the OpenAI SDK
 openai.api_type = "azure"
-openai.api_base = f"https://{AZURE_OPENAI_SERVICE}.openai.azure.com"
 openai.api_version = "2023-06-01-preview"
+if (IS_GOV_CLOUD_DEPLOYMENT):
+    openai.api_base = f"https://{AZURE_OPENAI_SERVICE}.openai.azure.us"
+else: 
+    openai.api_base = f"https://{AZURE_OPENAI_SERVICE}.openai.azure.com"
 
 # Setup StatusLog to allow access to CosmosDB for logging
 statusLog = StatusLog(
-    COSMOSDB_URL, COSMODB_KEY, COSMOSDB_LOG_DATABASE_NAME, COSMOSDB_LOG_CONTAINER_NAME
+    COSMOSDB_URL, COSMOSDB_KEY, COSMOSDB_LOG_DATABASE_NAME, COSMOSDB_LOG_CONTAINER_NAME
 )
 tagsHelper = TagsHelper(
-    COSMOSDB_URL, COSMODB_KEY, COSMOSDB_TAGS_DATABASE_NAME, COSMOSDB_TAGS_CONTAINER_NAME
+    COSMOSDB_URL, COSMOSDB_KEY, COSMOSDB_TAGS_DATABASE_NAME, COSMOSDB_TAGS_CONTAINER_NAME
 )
 
 # Comment these two lines out if using keys, set your API key in the OPENAI_API_KEY environment variable instead
@@ -102,6 +111,7 @@ tagsHelper = TagsHelper(
 openai.api_key = AZURE_OPENAI_SERVICE_KEY
 
 # Set up clients for Cognitive Search and Storage
+
 search_client = SearchClient(
     endpoint=AZURE_SEARCH_SERVICE_ENDPOINT,
     index_name=AZURE_SEARCH_INDEX,
@@ -116,36 +126,37 @@ blob_container = blob_client.get_container_client(AZURE_BLOB_STORAGE_CONTAINER)
 model_name = ''
 model_version = ''
 
+# Set up OpenAI management client
 if (IS_GOV_CLOUD_DEPLOYMENT):
-    model_name = AZURE_OPENAI_CHATGPT_MODEL_NAME
-    model_version = AZURE_OPENAI_CHATGPT_MODEL_VERSION
-    embedding_model_name = AZURE_OPENAI_EMBEDDINGS_MODEL_NAME
-    embedding_model_version = AZURE_OPENAI_EMBEDDINGS_VERSION
+    openai_mgmt_client = CognitiveServicesManagementClient(
+        credential=azure_credential,
+        subscription_id=AZURE_SUBSCRIPTION_ID,
+        base_url="https://management.usgovcloudapi.net",
+        credential_scopes=["https://management.usgovcloudapi.net/.default"])
 else:
-    # Set up OpenAI management client
     openai_mgmt_client = CognitiveServicesManagementClient(
         credential=azure_credential,
         subscription_id=AZURE_SUBSCRIPTION_ID)
 
-    deployment = openai_mgmt_client.deployments.get(
+deployment = openai_mgmt_client.deployments.get(
+    resource_group_name=AZURE_OPENAI_RESOURCE_GROUP,
+    account_name=AZURE_OPENAI_SERVICE,
+    deployment_name=AZURE_OPENAI_CHATGPT_DEPLOYMENT)
+
+model_name = deployment.properties.model.name
+model_version = deployment.properties.model.version
+
+if USE_AZURE_OPENAI_EMBEDDINGS:
+    embedding_deployment = openai_mgmt_client.deployments.get(
         resource_group_name=AZURE_OPENAI_RESOURCE_GROUP,
         account_name=AZURE_OPENAI_SERVICE,
-        deployment_name=AZURE_OPENAI_CHATGPT_DEPLOYMENT)
+        deployment_name=EMBEDDING_DEPLOYMENT_NAME)
 
-    model_name = deployment.properties.model.name
-    model_version = deployment.properties.model.version
-
-    if USE_AZURE_OPENAI_EMBEDDINGS:
-        embedding_deployment = openai_mgmt_client.deployments.get(
-            resource_group_name=AZURE_OPENAI_RESOURCE_GROUP,
-            account_name=AZURE_OPENAI_SERVICE,
-            deployment_name=EMBEDDING_DEPLOYMENT_NAME)
-
-        embedding_model_name = embedding_deployment.properties.model.name
-        embedding_model_version = embedding_deployment.properties.model.version
-    else:
-        embedding_model_name = ""
-        embedding_model_version = ""
+    embedding_model_name = embedding_deployment.properties.model.name
+    embedding_model_version = embedding_deployment.properties.model.version
+else:
+    embedding_model_name = ""
+    embedding_model_version = ""
 
 chat_approaches = {
     "rrr": ChatReadRetrieveReadApproach(
@@ -169,7 +180,6 @@ chat_approaches = {
 }
 
 app = Flask(__name__)
-
 
 @app.route("/", defaults={"path": "index.html"})
 @app.route("/<path:path>")

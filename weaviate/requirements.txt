@@ -1,0 +1,5 @@
+weaviate-client
+langchain
+langchain-community
+bs4
+html2text

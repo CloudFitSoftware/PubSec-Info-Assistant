@@ -15,7 +15,8 @@
 
 # Models
 
-models
+models/*
+!models/*.md
 
 # Image tags
 
@@ -371,6 +372,7 @@ infrastructure.debug.env
 infra_output.json
 random.txt
 .state
+values.yaml
 
 # Azure Developer CLI outputs
 .azure
@@ -386,3 +388,6 @@ packages-microsoft*
 
 # docker container build artifacts
 app/enrichment/shared_code
+
+# llm model files
+*.gguf

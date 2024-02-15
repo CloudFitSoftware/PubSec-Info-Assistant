@@ -75,7 +75,7 @@ properties: {
         AZURE_BLOB_STORAGE_KEY: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/AZURE-BLOB-STORAGE-KEY)'
       },
       !empty(applicationInsightsName) ? { APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsights.properties.ConnectionString } : {},
-      !empty(keyVaultName) ? { AZURE_KEY_VAULT_ENDPOINT: keyVault.properties.vaultUri } : {})
+      !empty(keyVaultName) ? { AZURE_KEY_VAULT_NAME: keyVaultName } : {})
   }
 
   resource configLogs 'config' = {

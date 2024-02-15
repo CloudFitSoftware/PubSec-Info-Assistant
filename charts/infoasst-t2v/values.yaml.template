@@ -1,0 +1,11 @@
+images: 
+  t2v:
+    repository: ${CONTAINER_REGISTRY_NAME}.azurecr.us/t2v
+    label: latest
+
+t2v:
+  env:
+    enablecuda: 0
+  service:
+    pipname:
+    pipresourcegroup:

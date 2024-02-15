@@ -13,6 +13,8 @@ import base64
 import requests
 import random
 from urllib.parse import unquote
+from azure.keyvault.secrets import SecretClient
+from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from azure.storage.queue import QueueClient, TextBase64EncodePolicy
 from azure.search.documents import SearchClient
@@ -31,7 +33,7 @@ from shared_code.status_log import State, StatusClassification, StatusLog
 from shared_code.tags_helper import TagsHelper
 
 # === ENV Setup ===
-
+## refactor this at a later time to be consistent with other apps
 ENV = {
     "AZURE_BLOB_STORAGE_KEY": None,
     "EMBEDDINGS_QUEUE": None,
@@ -62,18 +64,43 @@ ENV = {
     "AZURE_BLOB_STORAGE_ENDPOINT": None
 }
 
+# Commenting parts this code for now while we support both deployment types
 for key, value in ENV.items():
     new_value = os.getenv(key)
     if new_value is not None:
         ENV[key] = new_value
-    elif value is None:
-        raise ValueError(f"Environment variable {key} not set")
-    
-search_creds = AzureKeyCredential(ENV["AZURE_SEARCH_SERVICE_KEY"])
-    
-openai.api_base = "https://" + ENV["AZURE_OPENAI_SERVICE"] + ".openai.azure.com/"
+    # elif value is None:
+    #     raise ValueError(f"Environment variable {key} not set")
+
+str_to_bool = {'true': True, 'false': False}
+
+IS_GOV_CLOUD_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_GOV_CLOUD_DEPLOYMENT", "").lower()) or False
+AZURE_KEY_VAULT_NAME = os.environ.get("AZURE_KEY_VAULT_NAME") or ""
+azure_credential = DefaultAzureCredential()
+
+kv_uri = ''
+if (IS_GOV_CLOUD_DEPLOYMENT):
+    kv_uri = f"https://{AZURE_KEY_VAULT_NAME}.vault.usgovcloudapi.net"
+else:
+    kv_uri = f"https://{AZURE_KEY_VAULT_NAME}.vault.azure.net"
+
+keyVaultClient = SecretClient(vault_url=kv_uri, credential=azure_credential)
+
+AZURE_BLOB_STORAGE_KEY = keyVaultClient.get_secret("AZURE-BLOB-STORAGE-KEY").value
+AZURE_OPENAI_SERVICE_KEY = keyVaultClient.get_secret("AZURE-OPENAI-SERVICE-KEY").value
+AZURE_SEARCH_SERVICE_KEY = keyVaultClient.get_secret("AZURE-SEARCH-SERVICE-KEY").value
+BLOB_CONNECTION_STRING = keyVaultClient.get_secret("BLOB-CONNECTION-STRING").value
+COSMOSDB_KEY = keyVaultClient.get_secret("COSMOSDB-KEY").value
+
+search_creds = AzureKeyCredential(AZURE_SEARCH_SERVICE_KEY)
+
+# The following line will need to be updated to point to different endpoints
+if (IS_GOV_CLOUD_DEPLOYMENT):
+    openai.api_base = "https://" + ENV["AZURE_OPENAI_SERVICE"] + ".openai.azure.us"
+else: 
+    openai.api_base = "https://" + ENV["AZURE_OPENAI_SERVICE"] + ".openai.azure.com"
 openai.api_type = "azure"
-openai.api_key = ENV["AZURE_OPENAI_SERVICE_KEY"]
+openai.api_key = AZURE_OPENAI_SERVICE_KEY
 openai.api_version = "2023-06-01-preview"
 
 class AzOAIEmbedding(object):
@@ -113,12 +140,12 @@ log.info("Starting up")
 utilities_helper = UtilitiesHelper(
     azure_blob_storage_account=ENV["AZURE_BLOB_STORAGE_ACCOUNT"],
     azure_blob_storage_endpoint=ENV["AZURE_BLOB_STORAGE_ENDPOINT"],
-    azure_blob_storage_key=ENV["AZURE_BLOB_STORAGE_KEY"],
+    azure_blob_storage_key=AZURE_BLOB_STORAGE_KEY,
 )
 
-statusLog = StatusLog(ENV["COSMOSDB_URL"], ENV["COSMOSDB_KEY"], ENV["COSMOSDB_LOG_DATABASE_NAME"], ENV["COSMOSDB_LOG_CONTAINER_NAME"])
+statusLog = StatusLog(ENV["COSMOSDB_URL"], COSMOSDB_KEY, ENV["COSMOSDB_LOG_DATABASE_NAME"], ENV["COSMOSDB_LOG_CONTAINER_NAME"])
 
-tagsHelper = TagsHelper(ENV["COSMOSDB_URL"], ENV["COSMOSDB_KEY"], ENV["COSMOSDB_TAGS_DATABASE_NAME"], ENV["COSMOSDB_TAGS_CONTAINER_NAME"])
+tagsHelper = TagsHelper(ENV["COSMOSDB_URL"], COSMOSDB_KEY, ENV["COSMOSDB_TAGS_DATABASE_NAME"], ENV["COSMOSDB_TAGS_CONTAINER_NAME"])
 # === API Setup ===
 
 start_time = datetime.now()
@@ -297,7 +324,7 @@ def poll_queue() -> None:
         return
     
     queue_client = QueueClient.from_connection_string(
-        conn_str=ENV["BLOB_CONNECTION_STRING"], queue_name=ENV["EMBEDDINGS_QUEUE"]
+        conn_str=BLOB_CONNECTION_STRING, queue_name=ENV["EMBEDDINGS_QUEUE"]
     )
 
     log.debug("Polling embeddings queue for messages...")
@@ -325,7 +352,7 @@ def poll_queue() -> None:
         
             file_name, file_extension, file_directory  = utilities_helper.get_filename_and_extension(blob_path)
             chunk_folder_path = file_directory + file_name + file_extension
-            blob_service_client = BlobServiceClient.from_connection_string(ENV["BLOB_CONNECTION_STRING"])
+            blob_service_client = BlobServiceClient.from_connection_string(BLOB_CONNECTION_STRING)
             container_client = blob_service_client.get_container_client(ENV["AZURE_BLOB_STORAGE_CONTAINER"])
             index_chunks = []
 
@@ -409,7 +436,7 @@ def poll_queue() -> None:
                 message_json['embeddings_queued_count'] = requeue_count
                 # Requeue with a random backoff within limits
                 queue_client = QueueClient.from_connection_string(
-                    ENV["BLOB_CONNECTION_STRING"], 
+                    BLOB_CONNECTION_STRING, 
                     ENV["EMBEDDINGS_QUEUE"], 
                     message_encode_policy=TextBase64EncodePolicy())
                 message_string = json.dumps(message_json)

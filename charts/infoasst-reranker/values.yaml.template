@@ -1,0 +1,11 @@
+images: 
+  reranker:
+    repository: ${CONTAINER_REGISTRY_NAME}.azurecr.us/reranker
+    label: latest
+
+reranker:
+  env:
+    enablecuda: 0
+  service:
+    pipname:
+    pipresourcegroup:

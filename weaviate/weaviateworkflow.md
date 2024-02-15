@@ -1,0 +1,1 @@
+![Weaviate Workflow](media/weaviate-workflow.png)

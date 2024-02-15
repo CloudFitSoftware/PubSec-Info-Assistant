@@ -1,0 +1,14 @@
+images: 
+  weaviate:
+    repository: ${CONTAINER_REGISTRY_NAME}.azurecr.us/weaviate
+    label: latest
+
+weaviate:
+  env:
+    authenticationanonymousaccessenabled: true
+    persistencedatapath: /var/lib/weaviate
+    transformersinferenceapi: http://infoasst-t2v.infoasst.svc.cluster.local:8080
+    rerankerinferenceapi: http://infoasst-reranker.infoasst.svc.cluster.local:8080
+  service:
+    pipname:
+    pipresourcegroup:

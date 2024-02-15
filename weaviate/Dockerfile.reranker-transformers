@@ -1,0 +1,7 @@
+# Use the base image
+FROM semitechnologies/reranker-transformers:cross-encoder-ms-marco-MiniLM-L-6-v2
+
+# Set environment variable
+ENV ENABLE_CUDA=0
+
+# No CMD needed as the default entrypoint and command of the base image is used

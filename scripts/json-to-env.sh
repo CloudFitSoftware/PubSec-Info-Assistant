@@ -95,6 +95,14 @@ jq -r  '
             "env_var": "COSMOSDB_LOG_CONTAINER_NAME"
         },
         {
+            "path": "azurE_COSMOSDB_TAGS_CONTAINER_NAME",
+            "env_var": "COSMOSDB_TAGS_CONTAINER_NAME"
+        },
+        {
+            "path": "azurE_COSMOSDB_TAGS_DATABASE_NAME",
+            "env_var": "COSMOSDB_TAGS_DATABASE_NAME"
+        },
+        {
             "path": "azurE_OPENAI_RESOURCE_GROUP",
             "env_var": "AZURE_OPENAI_RESOURCE_GROUP"
         },

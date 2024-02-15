@@ -84,8 +84,7 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
         AZURE_CLIENT_SECRET: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/AZURE-CLIENT-SECRET)'
       },
       !empty(applicationInsightsName) ? { APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsights.properties.ConnectionString } : {},
-      !empty(keyVaultName) ? { AZURE_KEY_VAULT_ENDPOINT: keyVault.properties.vaultUri } : {})
-  }
+      !empty(keyVaultName) ? { AZURE_KEY_VAULT_NAME: keyVaultName } : {})  }
 
   resource configLogs 'config' = {
     name: 'logs'
