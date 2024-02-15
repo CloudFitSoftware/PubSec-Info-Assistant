@@ -2,9 +2,9 @@
 
 FROM python:3.10
 
-WORKDIR /webapp
+WORKDIR /enrichment
 
-COPY webapp/ /webapp
+COPY enrichment/ /enrichment
 
 RUN pip3 install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
@@ -12,4 +12,4 @@ RUN pip install gunicorn
 
 EXPOSE 5000
 
-CMD gunicorn --bind 0.0.0.0:5000 app:app
+CMD gunicorn -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000 app:app

@@ -1,0 +1,39 @@
+images: 
+  enrichment:
+    repository: ${CONTAINER_REGISTRY_NAME}.azurecr.us/enrichment
+    label: latest
+
+enrichment:
+  env:
+    applicationinsightsconnectionstring: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
+    azureblobstorageaccount: ${AZURE_BLOB_STORAGE_ACCOUNT}
+    azureblobstoragecontainer: content
+    azureblobstorageendpoint: ${BLOB_STORAGE_ACCOUNT_ENDPOINT}
+    azureblobstorageuploadcontainer: upload
+    azurekeyvaultname: ${DEPLOYMENT_KEYVAULT_NAME}
+    azureopenaiembeddingdeploymentname: ${AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME}
+    azureopenaiservice: ${AZURE_OPENAI_SERVICE}
+    azuresearchindex: vector-index
+    azuresearchservice: ${AZURE_SEARCH_SERVICE}
+    azuresearchserviceendpoint: ${AZURE_SEARCH_SERVICE_ENDPOINT}
+    cosmosdblogcontainername: ${COSMOSDB_LOG_CONTAINER_NAME}
+    cosmosdblogdatabasename: ${COSMOSDB_LOG_DATABASE_NAME}
+    cosmosdbtagscontainername: ${COSMOSDB_TAGS_CONTAINER_NAME}
+    cosmosdbtagsdatabasename: ${COSMOSDB_TAGS_DATABASE_NAME}
+    cosmosdburl: ${COSMOSDB_URL}
+    dequeuemessagebatchsize: 3
+    embeddingrequeuebackoff: 60
+    embeddingvectorsize: 1536
+    embeddingsqueue: embeddings-queue
+    enableoryxbuild: true
+    isgovclouddeployment: ${IS_GOV_CLOUD_DEPLOYMENT}
+    loglevel: DEBUG
+    maxembeddingrequeuecount: 5
+    scmdobuildduringdeployment: true
+    targetembeddingsmodel: ${TARGET_EMBEDDINGS_MODEL}
+    websitehttploggingretentiondays: 1
+    websitescontainerstarttimelimit: 600
+
+  service:
+    pipname:
+    pipresourcegroup:

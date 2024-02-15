@@ -1,0 +1,7 @@
+# Use the base image
+FROM semitechnologies/transformers-inference:sentence-transformers-multi-qa-MiniLM-L6-cos-v1
+
+# Set environment variable
+ENV ENABLE_CUDA=0
+
+# No CMD needed as the default entrypoint and command of the base image is used

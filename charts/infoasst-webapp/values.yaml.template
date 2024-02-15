@@ -1,0 +1,44 @@
+images: 
+  webapp:
+    repository: ${CONTAINER_REGISTRY_NAME}.azurecr.us/webapp # will need to get commercial/gov endpoints
+    label: latest
+
+webapp:
+  env:
+    azureblobstorageaccount: ${AZURE_BLOB_STORAGE_ACCOUNT}
+    azureblobstoragecontainer: content
+    azureblobstorageendpoint: ${BLOB_STORAGE_ACCOUNT_ENDPOINT}
+    azureblobstorageuploadcontainer: upload
+    azurekeyvaultendpoint:
+    azurekeyvaultname: ${DEPLOYMENT_KEYVAULT_NAME}
+    azureopenaichatgptdeployment: ${AZURE_OPENAI_CHATGPT_DEPLOYMENT}
+    azureopenaichatgptmodelname: ${AZURE_OPENAI_CHATGPT_MODEL_NAME}
+    azureopenatchatgptmodelversion: ${AZURE_OPENAI_CHATGPT_MODEL_VERSION}
+    azureopenaiembeddingsmodelname: ${AZURE_OPENAI_EMBEDDINGS_MODEL_NAME}
+    azureopenaiembeddingsmodelversion: ${AZURE_OPENAI_EMBEDDINGS_MODEL_VERSION}
+    azureopenairesourcegroup: ${AZURE_OPENAI_RESOURCE_GROUP}
+    azureopenaiservice: ${AZURE_OPENAI_SERVICE}
+    azuresearchindex: vector-index
+    azuresearchservice: ${AZURE_SEARCH_SERVICE}
+    azuresearchserviceendpoint: ${AZURE_SEARCH_SERVICE_ENDPOINT}
+    azuresubscriptionid: ${SUBSCRIPTION_ID}
+    azuretenantid: ${TENANT_ID}
+    chatwarningbannertext: ${CHAT_WARNING_BANNER_TEXT}
+    cosmosdblogcontainername: ${COSMOSDB_LOG_CONTAINER_NAME}
+    cosmosdblogdatabasename: ${COSMOSDB_LOG_DATABASE_NAME}
+    cosmosdbtagscontainername: ${COSMOSDB_TAGS_CONTAINER_NAME}
+    cosmosdbtagsdatabasename: ${COSMOSDB_TAGS_DATABASE_NAME}
+    cosmosdburl: ${COSMOSDB_URL}
+    embeddingdeploymentname: ${AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME}
+    enableoryxbuild: true
+    enrichmentappservicename: ${ENRICHMENT_APPSERVICE_NAME}
+    isgovclouddeployment: ${IS_USGOV_DEPLOYMENT}
+    querytermlanguage: ${PROMPT_QUERYTERM_LANGUAGE}
+    scmdobuildduringdeployment: true
+    targetembeddingsmodel: ${TARGET_EMBEDDINGS_MODEL}
+    useazureopenaiembeddings: ${USE_AZURE_OPENAI_EMBEDDINGS}
+    websitehttploggingretentiondays: 1
+
+  service:
+    pipname:
+    pipresourcegroup:

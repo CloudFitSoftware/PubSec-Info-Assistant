@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infoasst-enrichment
+  namespace: infoasst
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: infoasst-enrichment
+  template:
+    metadata:
+      labels:
+        app: infoasst-enrichment
+    spec:
+      containers:
+      - name: infoasst-enrichment
+        image: {{ .Values.images.enrichment.repository }}:{{ .Values.images.enrichment.label }}
+        env:
+          - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+            value: "{{ .Values.enrichment.env.applicationinsightsconnectionstring }}"
+          - name: AZURE_BLOB_STORAGE_ACCOUNT
+            value: "{{ .Values.enrichment.env.azureblobstorageaccount }}"
+          - name: AZURE_BLOB_STORAGE_CONTAINER
+            value: "{{ .Values.enrichment.env.azureblobstoragecontainer }}"
+          - name: AZURE_BLOB_STORAGE_ENDPOINT
+            value: "{{ .Values.enrichment.env.azureblobstorageendpoint }}"
+          - name: AZURE_BLOB_STORAGE_UPLOAD_CONTAINER
+            value: "{{ .Values.enrichment.env.azureblobstorageuploadcontainer }}"
+          - name: AZURE_KEY_VAULT_ENDPOINT
+            value: "{{ .Values.enrichment.env.azurekeyvaultendpoint }}"
+          - name: AZURE_KEY_VAULT_NAME
+            value: "{{ .Values.enrichment.env.azurekeyvaultname }}"
+          - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME
+            value: "{{ .Values.enrichment.env.azureopenaiembeddingdeploymentname }}"
+          - name: AZURE_OPENAI_SERVICE
+            value: "{{ .Values.enrichment.env.azureopenaiservice }}"
+          - name: AZURE_SEARCH_INDEX
+            value: "{{ .Values.enrichment.env.azuresearchindex }}"
+          - name: AZURE_SEARCH_SERVICE
+            value: "{{ .Values.enrichment.env.azuresearchservice }}"
+          - name: AZURE_SEARCH_SERVICE_ENDPOINT
+            value: "{{ .Values.enrichment.env.azuresearchserviceendpoint }}"
+          - name: COSMOSDB_LOG_CONTAINER_NAME
+            value: "{{ .Values.enrichment.env.cosmosdblogcontainername }}"
+          - name: COSMOSDB_LOG_DATABASE_NAME
+            value: "{{ .Values.enrichment.env.cosmosdblogdatabasename }}"
+          - name: COSMOSDB_TAGS_CONTAINER_NAME
+            value: "{{ .Values.enrichment.env.cosmosdbtagscontainername }}"
+          - name: COSMOSDB_TAGS_DATABASE_NAME
+            value: "{{ .Values.enrichment.env.cosmosdbtagsdatabasename }}"
+          - name: COSMOSDB_URL
+            value: "{{ .Values.enrichment.env.cosmosdburl }}"
+          - name: DEQUEUE_MESSAGE_BATCH_SIZE
+            value: "{{ .Values.enrichment.env.dequeuemessagebatchsize }}"
+          - name: EMBEDDING_REQUEUE_BACKOFF
+            value: "{{ .Values.enrichment.env.embeddingrequeuebackoff }}"
+          - name: EMBEDDING_VECTOR_SIZE
+            value: "{{ .Values.enrichment.env.embeddingvectorsize }}"
+          - name: EMBEDDINGS_QUEUE
+            value: "{{ .Values.enrichment.env.embeddingsqueue }}"
+          - name: ENABLE_ORYX_BUILD
+            value: "{{ .Values.enrichment.env.enableoryxbuild }}"
+          - name: IS_GOV_CLOUD_DEPLOYMENT
+            value: "{{ .Values.enrichment.env.isgovclouddeployment }}"
+          - name: LOG_LEVEL
+            value: "{{ .Values.enrichment.env.loglevel }}"
+          - name: MAX_EMBEDDING_REQUEUE_COUNT
+            value: "{{ .Values.enrichment.env.maxembeddingrequeuecount }}"
+          - name: SCM_DO_BUILD_DURING_DEPLOYMENT
+            value: "{{ .Values.enrichment.env.scmdobuildduringdeployment }}"
+          - name: TARGET_EMBEDDINGS_MODEL
+            value: "{{ .Values.enrichment.env.targetembeddingsmodel }}"
+          - name: WEBSITE_HTTPLOGGING_RETENTION_DAYS
+            value: "{{ .Values.enrichment.env.websitehttploggingretentiondays }}"
+          - name: WEBSITES_CONTAINER_START_TIME_LIMIT
+            value: "{{ .Values.enrichment.env.websitescontainerstarttimelimit }}"
+        resources:
+          limits:
+            memory: "12G"
+            cpu: "500m"
+        ports:
+          - containerPort: 5000
+
+
+
