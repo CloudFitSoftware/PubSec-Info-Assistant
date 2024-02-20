@@ -41,7 +41,6 @@ param backendServiceName string = ''
 param enrichmentServiceName string = ''
 param functionsAppName string = ''
 param mediaServiceName string = ''
-param videoIndexerName string = ''
 param searchServicesName string = ''
 param searchServicesSkuName string = 'standard'
 param storageAccountName string = ''
@@ -68,6 +67,7 @@ param targetPages string = 'ALL'
 param formRecognizerApiVersion string = '2023-07-31'
 param queryTermLanguage string = 'English'
 param isGovCloudDeployment bool = contains(location, 'usgov')
+param isContainerizedDeployment bool
 
 // ACR Settings
 param acrSku string = 'Basic'
@@ -153,7 +153,7 @@ module logging 'core/logging/logging.bicep' = {
 }
 
 // Create an App Service Plan to group applications under the same payment plan and SKU
-module appServicePlan 'core/host/appserviceplan.bicep' = {
+module appServicePlan 'core/host/appserviceplan.bicep' = if (!isContainerizedDeployment) {
   name: 'appserviceplan'
   scope: rg
   params: {
@@ -185,7 +185,7 @@ module funcServicePlan 'core/host/funcserviceplan.bicep' = {
 }
 
 // Create an App Service Plan to group applications under the same payment plan and SKU
-module enrichmentAppServicePlan 'core/host/enrichmentappserviceplan.bicep' = {
+module enrichmentAppServicePlan 'core/host/enrichmentappserviceplan.bicep' = if (!isContainerizedDeployment) {
   name: 'enrichmentAppserviceplan'
   scope: rg
   params: {
@@ -205,12 +205,12 @@ module enrichmentAppServicePlan 'core/host/enrichmentappserviceplan.bicep' = {
 }
 
 // Create an App Service Plan and supporting services for the enrichment app service
-module enrichmentApp 'core/host/enrichmentappservice.bicep' = {
+module enrichmentApp 'core/host/enrichmentappservice.bicep' = if (!isContainerizedDeployment) {
   name: 'enrichmentApp'
   scope: rg
   params: {
     name: !empty(enrichmentServiceName) ? enrichmentServiceName : '${prefix}-enrichment${abbrs.webSitesAppService}${randomString}'
-    appServicePlanId: enrichmentAppServicePlan.outputs.id
+    appServicePlanId: !isContainerizedDeployment ? enrichmentAppServicePlan.outputs.id : ''
     location: location
     tags: tags
     runtimeName: 'python'
@@ -254,14 +254,14 @@ module enrichmentApp 'core/host/enrichmentappservice.bicep' = {
 }
 
 // The application frontend
-module backend 'core/host/appservice.bicep' = {
+module backend 'core/host/appservice.bicep' = if (!isContainerizedDeployment) {
   name: 'web'
   scope: rg
   params: {
     name: !empty(backendServiceName) ? backendServiceName : '${prefix}-${abbrs.webSitesAppService}${randomString}'
     location: location
     tags: union(tags, { 'azd-service-name': 'backend' })
-    appServicePlanId: appServicePlan.outputs.id
+    appServicePlanId: !isContainerizedDeployment ? appServicePlan.outputs.id : ''
     runtimeName: 'python'
     runtimeVersion: '3.10'
     scmDoBuildDuringDeployment: true
@@ -305,7 +305,7 @@ module backend 'core/host/appservice.bicep' = {
       IS_GOV_CLOUD_DEPLOYMENT: isGovCloudDeployment
       CHAT_WARNING_BANNER_TEXT: chatWarningBannerText
       TARGET_EMBEDDINGS_MODEL: useAzureOpenAIEmbeddings ? '${abbrs.openAIEmbeddingModel}${azureOpenAIEmbeddingDeploymentName}' : sentenceTransformersModelName
-      ENRICHMENT_APPSERVICE_NAME: enrichmentApp.outputs.name
+      ENRICHMENT_APPSERVICE_NAME: !isContainerizedDeployment ? enrichmentApp.outputs.name : 'enrichment'
       APPLICATION_TITLE: applicationtitle
     }
     aadClientId: aadWebClientId
@@ -513,7 +513,7 @@ module cosmosdb 'core/db/cosmosdb.bicep' = {
 }
 
 // Azure Kubernetes Service
-module aksModule 'core/compute/aks.bicep' = {
+module aksModule 'core/compute/aks.bicep' = if (isContainerizedDeployment)  {
   scope: rg
   name: 'aks-deployment'
   params: {
@@ -528,7 +528,7 @@ module aksModule 'core/compute/aks.bicep' = {
 }
 
 // Azure Container Registry
-module acrModule 'core/storage/container-registry.bicep' = {
+module acrModule 'core/storage/container-registry.bicep' = if (isContainerizedDeployment) {
   scope: rg
   name: 'acr-deployment'
   params: {
@@ -540,7 +540,7 @@ module acrModule 'core/storage/container-registry.bicep' = {
 }
 
 // Webapp Front-end Public IP
-module webappPubIpModule 'core/networking/webapp-publicip.bicep' = {
+module webappPubIpModule 'core/networking/webapp-publicip.bicep' = if (isContainerizedDeployment) {
   scope: rg
   name: 'webapp-pip-deployment'
   params: {
@@ -551,7 +551,7 @@ module webappPubIpModule 'core/networking/webapp-publicip.bicep' = {
 }
 
 // Function App 
-module functions 'core/function/function.bicep' = {
+module functions 'core/function/function.bicep' = if (!isContainerizedDeployment) {
   name: 'functions'
   scope: rg
   params: {
@@ -611,7 +611,7 @@ module functions 'core/function/function.bicep' = {
   ]
 }
 
-module containerFunctions 'core/function/contfunctions.bicep' = {
+module containerFunctions 'core/function/contfunctions.bicep' = if (isContainerizedDeployment) {
   name: 'containerFunctions'
   scope: rg
   params: {
@@ -661,7 +661,7 @@ module containerFunctions 'core/function/contfunctions.bicep' = {
     EMBEDDINGS_QUEUE: embeddingsQueue
     azureSearchIndex: searchIndexName
     azureSearchServiceEndpoint: searchServices.outputs.endpoint
-    acrEndpoint: acrModule.outputs.endpoint
+    acrEndpoint: isContainerizedDeployment ? acrModule.outputs.endpoint : ''
     imageName: imageName
     imageTag: imageTag
   }
@@ -670,7 +670,6 @@ module containerFunctions 'core/function/contfunctions.bicep' = {
     storage
     cosmosdb
     kvModule
-    acrModule
   ]
 }
 
@@ -683,18 +682,6 @@ module media_service 'core/video_indexer/media_service.bicep' = {
     location: location
     tags: tags
     storageAccountID: storageMedia.outputs.id
-  }
-}
-
-// AVAM Service
-module avam 'core/video_indexer/video_indexer.bicep' = {
-  name: 'avam'
-  scope: rg
-  params: {
-    name: !empty(videoIndexerName) ? videoIndexerName : '${prefix}${abbrs.videoIndexer}${randomString}'
-    location: location
-    tags: tags
-    mediaServiceAccountResourceId: media_service.outputs.id
   }
 }
 
@@ -750,71 +737,61 @@ module searchContribRoleUser 'core/security/role.bicep' = {
 }
 
 // SYSTEM IDENTITIES
-module openAiRoleBackend 'core/security/role.bicep' = {
+module openAiRoleBackend 'core/security/role.bicep' = if (!isContainerizedDeployment) {
   scope: rg
   name: 'openai-role-backend'
   params: {
-    principalId: backend.outputs.identityPrincipalId
+    principalId: !isContainerizedDeployment ? backend.outputs.identityPrincipalId : ''
     roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
     principalType: 'ServicePrincipal'
   }
 }
 
-module ACRRoleContainerAppService 'core/security/role.bicep' = {
-  scope: rg
-  name: 'container-webapp-acrpull-role'
-  params: {
-    principalId: enrichmentApp.outputs.identityPrincipalId
-    roleDefinitionId: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-    principalType: 'ServicePrincipal'
-  }
-}
-
-module ACRRoleContainerFunctionAppService 'core/security/role.bicep' = {
+module ACRRoleContainerFunctionAppService 'core/security/role.bicep' = if (isContainerizedDeployment) {
   scope: rg
   name: 'container-function-acrpull-role'
   params: {
-    principalId: containerFunctions.outputs.identityPrincipalId
+    principalId: isContainerizedDeployment ? containerFunctions.outputs.identityPrincipalId : ''
     roleDefinitionId: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
     principalType: 'ServicePrincipal'
   }
 }
 
-module ACRRoleAzureKubernetesService 'core/security/role.bicep' = {
+module ACRRoleAzureKubernetesService 'core/security/role.bicep' = if (isContainerizedDeployment) {
   scope: rg
   name: 'aks-identity-acrpull-role'
   params: {
-    principalId: aksModule.outputs.kubeletPrincipalId
+    principalId: isContainerizedDeployment ? aksModule.outputs.kubeletPrincipalId : ''
     roleDefinitionId: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
     principalType: 'ServicePrincipal'
   }
 }
 
-module networkContributorRole 'core/security/role.bicep' = {
+module networkContributorRole 'core/security/role.bicep' = if (isContainerizedDeployment) {
   scope: rg
   name: 'network-contrib-role'
   params: {
-    principalId: aksModule.outputs.aksPrincipalId
+    principalId: isContainerizedDeployment ? aksModule.outputs.aksPrincipalId : ''
     roleDefinitionId: '4d97b98b-1d4f-4787-a291-c67834d212e7'
     principalType: 'ServicePrincipal'
   }
 }
 
-module storageRoleBackend 'core/security/role.bicep' = {
+module storageRoleBackend 'core/security/role.bicep' = if (!isContainerizedDeployment) {
   scope: rg
   name: 'storage-role-backend'
   params: {
-    principalId: backend.outputs.identityPrincipalId
+    principalId: !isContainerizedDeployment ? backend.outputs.identityPrincipalId : ''
     roleDefinitionId: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
     principalType: 'ServicePrincipal'
   }
 }
 
-module searchRoleBackend 'core/security/role.bicep' = {
+module searchRoleBackend 'core/security/role.bicep' = if (!isContainerizedDeployment) {
   scope: rg
   name: 'search-role-backend'
   params: {
-    principalId: backend.outputs.identityPrincipalId
+    principalId: !isContainerizedDeployment ? backend.outputs.identityPrincipalId : ''
     roleDefinitionId: '1407120a-92aa-4202-b7e9-c0e197c71c8f'
     principalType: 'ServicePrincipal'
   }
@@ -824,13 +801,13 @@ module storageRoleFunc 'core/security/role.bicep' = {
   scope: rg
   name: 'storage-role-Func'
   params: {
-    principalId: functions.outputs.identityPrincipalId
+    principalId: isContainerizedDeployment ? containerFunctions.outputs.identityPrincipalId: functions.outputs.identityPrincipalId
     roleDefinitionId: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
     principalType: 'ServicePrincipal'
   }
 }
 
-module containerRegistryPush 'core/security/role.bicep' = {
+module containerRegistryPush 'core/security/role.bicep' = if (isContainerizedDeployment) {
   scope: rg
   name: 'AcrPush'
   params: {
@@ -899,7 +876,7 @@ output AZURE_COSMOSDB_TAGS_CONTAINER_NAME string = cosmosdb.outputs.CosmosDBTags
 output AZURE_COSMOSDB_TAGS_DATABASE_NAME string = cosmosdb.outputs.CosmosDBTagsDatabaseName
 output AZURE_COSMOSDB_URL string = cosmosdb.outputs.CosmosDBEndpointURL
 output AZURE_FORM_RECOGNIZER_ENDPOINT string = formrecognizer.outputs.formRecognizerAccountEndpoint
-output AZURE_FUNCTION_APP_NAME string = functions.outputs.name
+output AZURE_FUNCTION_APP_NAME string = isContainerizedDeployment ? containerFunctions.outputs.name : functions.outputs.name
 output AZURE_OPENAI_CHAT_GPT_DEPLOYMENT string = !empty(chatGptDeploymentName) ? chatGptDeploymentName : !empty(chatGptModelName) ? chatGptModelName : 'gpt-35-turbo-16k'
 output AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME string = azureOpenAIEmbeddingDeploymentName
 output AZURE_OPENAI_RESOURCE_GROUP string = azureOpenAIResourceGroup
@@ -913,16 +890,16 @@ output AZURE_STORAGE_CONTAINER string = containerName
 output AZURE_STORAGE_UPLOAD_CONTAINER string = uploadContainerName
 output AZURE_SUBSCRIPTION_ID string = subscriptionId
 output AZURE_TENANT_ID string = tenantId
-output BACKEND_URI string = backend.outputs.uri
-output BACKEND_NAME string = backend.outputs.name
+output BACKEND_URI string = !isContainerizedDeployment ? backend.outputs.uri : ''
+output BACKEND_NAME string = !isContainerizedDeployment ? backend.outputs.name : ''
 output BLOB_STORAGE_ACCOUNT_ENDPOINT string = storage.outputs.primaryEndpoints.blob
 output CHUNK_TARGET_SIZE string = chunkTargetSize
-output CONTAINER_REGISTRY_NAME string = acrModule.outputs.acrName
+output CONTAINER_REGISTRY_NAME string = isContainerizedDeployment ? acrModule.outputs.acrName : ''
 output DEPLOYMENT_KEYVAULT_NAME string = kvModule.outputs.keyVaultName
 output EMBEDDING_DEPLOYMENT_NAME string = useAzureOpenAIEmbeddings ? azureOpenAIEmbeddingDeploymentName : sentenceTransformersModelName
 output EMBEDDING_VECTOR_SIZE string = useAzureOpenAIEmbeddings ? '1536' : sentenceTransformerEmbeddingVectorSize
 output ENABLE_DEV_CODE bool = enableDevCode
-output ENRICHMENT_APPSERVICE_NAME string = enrichmentApp.outputs.name 
+output ENRICHMENT_APPSERVICE_NAME string = !isContainerizedDeployment ? enrichmentApp.outputs.name : 'enrichment'
 output ENRICHMENT_ENDPOINT string = enrichment.outputs.cognitiveServiceEndpoint
 output ENRICHMENT_NAME string = enrichment.outputs.cognitiveServicerAccountName
 output FR_API_VERSION string = formRecognizerApiVersion

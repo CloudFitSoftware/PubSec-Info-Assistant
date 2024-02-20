@@ -10,7 +10,9 @@ help: ## Show this help
         | column -t -s '|'
 
 deploy: build infrastructure extract-env deploy-enrichments deploy-search-indexes deploy-webapp deploy-functions ## Deploy infrastructure and application code
- 
+
+deploy-containers: build infrastructure extract-env deploy-search-indexes ## Need to add docker build/push steps here, but for now this is all we need
+
 build-deploy-webapp: build extract-env deploy-webapp ##Build and Deploy the Webapp
 build-deploy-enrichments: build extract-env deploy-enrichments ##Build and Deploy the Enrichment Webapp
 build-deploy-functions: build extract-env deploy-functions ##Build and Deploy the Functions
@@ -18,8 +20,8 @@ build-deploy-functions: build extract-env deploy-functions ##Build and Deploy th
 build: ## Build application code
 	@./scripts/build.sh
 
-build-containers: extract-env
-	@./app/enrichment/docker-build.sh
+build-containers: build extract-env
+	@./scripts/build-containers.sh
 
 infrastructure: check-subscription ## Deploy infrastructure
 	@./scripts/inf-create.sh

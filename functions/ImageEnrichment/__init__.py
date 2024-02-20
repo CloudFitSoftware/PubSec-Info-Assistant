@@ -31,6 +31,7 @@ azure_blob_content_storage_container = os.environ[
     "BLOB_STORAGE_ACCOUNT_OUTPUT_CONTAINER_NAME"
 ]
 IS_USGOV_DEPLOYMENT = os.getenv("IS_USGOV_DEPLOYMENT", False)
+IS_CONTAINERIZED_DEPLOYMENT = os.getenv("IS_CONTAINERIZED_DEPLOYMENT", False)
 
 # Cosmos DB
 cosmosdb_url = os.environ["COSMOSDB_URL"]
@@ -46,9 +47,14 @@ cognitive_services_endpoint = os.environ["ENRICHMENT_ENDPOINT"]
 cognitive_services_account_location = os.environ["ENRICHMENT_LOCATION"]
 
 # Search Service
-AZURE_SEARCH_SERVICE_ENDPOINT = os.environ.get("AZURE_SEARCH_SERVICE_ENDPOINT")
-AZURE_SEARCH_INDEX = os.environ.get("AZURE_SEARCH_INDEX") or "gptkbindex"
-SEARCH_CREDS = AzureKeyCredential(os.environ.get("AZURE_SEARCH_SERVICE_KEY"))
+if not IS_CONTAINERIZED_DEPLOYMENT:
+    AZURE_SEARCH_SERVICE_ENDPOINT = os.environ.get("AZURE_SEARCH_SERVICE_ENDPOINT")
+    AZURE_SEARCH_INDEX = os.environ.get("AZURE_SEARCH_INDEX") or "gptkbindex"
+    SEARCH_CREDS = AzureKeyCredential(os.environ.get("AZURE_SEARCH_SERVICE_KEY"))
+else:
+    SEARCH_SERVICE_ENDPOINT = os.environ.get("SEARCH_SERVICE_ENDPOINT") #figure out how to handle if IS_CONTAINERIZED_DEPLOYMENT
+    SEARCH_INDEX = os.environ.get("SEARCH_INDEX") or "gptkbindex"
+    SEARCH_CREDS = AzureKeyCredential(os.environ.get("SEARCH_SERVICE_KEY"))
 
 # Translation params for OCR'd text
 targetTranslationLanguage = os.environ["TARGET_TRANSLATION_LANGUAGE"]

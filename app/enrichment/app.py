@@ -31,6 +31,9 @@ from sentence_transformers import SentenceTransformer
 from shared_code.utilities_helper import UtilitiesHelper
 from shared_code.status_log import State, StatusClassification, StatusLog
 from shared_code.tags_helper import TagsHelper
+from langchain.docstore.document import Document
+from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
+import weaviate
 
 # === ENV Setup ===
 ## refactor this at a later time to be consistent with other apps
@@ -75,6 +78,11 @@ for key, value in ENV.items():
 str_to_bool = {'true': True, 'false': False}
 
 IS_GOV_CLOUD_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_GOV_CLOUD_DEPLOYMENT", "").lower()) or False
+
+IS_CONTAINERIZED_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_CONTAINERIZED_DEPLOYMENT", "").lower()) or False
+
+WEAVIATE_URL = os.environ.get("WEAVIATE_URL", "") 
+
 AZURE_KEY_VAULT_NAME = os.environ.get("AZURE_KEY_VAULT_NAME") or ""
 azure_credential = DefaultAzureCredential()
 
@@ -88,11 +96,11 @@ keyVaultClient = SecretClient(vault_url=kv_uri, credential=azure_credential)
 
 AZURE_BLOB_STORAGE_KEY = keyVaultClient.get_secret("AZURE-BLOB-STORAGE-KEY").value
 AZURE_OPENAI_SERVICE_KEY = keyVaultClient.get_secret("AZURE-OPENAI-SERVICE-KEY").value
-AZURE_SEARCH_SERVICE_KEY = keyVaultClient.get_secret("AZURE-SEARCH-SERVICE-KEY").value
+AZURE_SEARCH_SERVICE_KEY = keyVaultClient.get_secret("AZURE-SEARCH-SERVICE-KEY").value #figure out how to handle if IS_CONTAINERIZED_DEPLOYMENT
 BLOB_CONNECTION_STRING = keyVaultClient.get_secret("BLOB-CONNECTION-STRING").value
 COSMOSDB_KEY = keyVaultClient.get_secret("COSMOSDB-KEY").value
 
-search_creds = AzureKeyCredential(AZURE_SEARCH_SERVICE_KEY)
+search_creds = AzureKeyCredential(AZURE_SEARCH_SERVICE_KEY) #figure out how to handle if IS_CONTAINERIZED_DEPLOYMENT
 
 # The following line will need to be updated to point to different endpoints
 if (IS_GOV_CLOUD_DEPLOYMENT):
@@ -272,18 +280,85 @@ def embed_texts(model: str, texts: List[str]):
 
     return output
 
+class AzureSearch:
+    def __init__(self, endpoint, index_name, credential):
+        self.endpoint = endpoint
+        self.index_name = index_name
+        self.credential = credential
+        self.search_client = SearchClient(endpoint=self.endpoint, index_name=self.index_name, credential=self.credential)
 
+    def index_documents(self, chunks):
+        results = self.search_client.upload_documents(documents=chunks)
+        succeeded = sum([1 for r in results if r.succeeded])
+        log.debug(f"\tIndexed {len(results)} chunks, {succeeded} succeeded")
+
+class WeaviateSearch:
+    """A wrapper for a Weaviate search client."""
+    def __init__(self, url, index_name):
+        self.url = url
+
+        # add other credentials needed here
+        self.weaviate_client = weaviate.Client(url)
+
+        # if index isn't created, create it
+        if not self.weaviate_client.schema.exists(index_name):
+            class_obj = {
+                    "class": index_name,
+                    "vectorizer": "text2vec-transformers",
+                    "moduleConfig": {
+                        "reranker-transformers": {
+                            "model": "cross-encoder-ms-marco-MiniLM-L-6-v2",
+                        }
+                    },
+            }
+            self.weaviate_client.schema.create_class(class_obj)
+     
+        self.search_client = WeaviateHybridSearchRetriever(
+                    client=self.weaviate_client,
+                    index_name=index_name,
+                    text_key="text",
+                    # k=10,
+                    # alpha=0.50,
+                    attributes=[],
+                    create_schema_if_missing=True,
+                )
+
+    def index_documents(self, chunks):
+        """
+        Indexes a list of document chunks.
+
+        Args:
+            chunks (list): A list of document chunks.
+
+        Returns:
+            None
+        """
+        # convert to Document objects
+        chunks = [Document(page_content=chunk["page_content"], 
+                   metadata={"title": chunk['title'], #translated title?
+                         "source": chunk['file_uri'],
+                         "language":  "en-US" }) #defaulting, can we pull from somewhere?
+                for chunk in chunks]
+        
+        # add documents to weaviate
+        self.search_client.add_documents(docs=chunks)
+
+        # succeeded = sum([1 for r in results if r.succeeded])
+        # log.debug(f"\tIndexed {len(results)} chunks, {succeeded} succeeded")
+
+        # we don't get back a success/fail from weaviate, so we'll have it assume it worked
+        log.debug("\tIndexed %s chunks, %s succeeded", len(chunks), len(chunks))
 
 def index_sections(chunks):
-    """ Pushes a batch of content to the search index
-    """    
-    search_client = SearchClient(endpoint=ENV["AZURE_SEARCH_SERVICE_ENDPOINT"],
+    """ Pushes a batch of content to the search index based on deployment type
+    """
+    if IS_CONTAINERIZED_DEPLOYMENT:
+        search_client = WeaviateSearch(url=WEAVIATE_URL)
+    else:
+        search_client = AzureSearch(endpoint=ENV["AZURE_SEARCH_SERVICE_ENDPOINT"],
                                     index_name=ENV["AZURE_SEARCH_INDEX"],
-                                    credential=search_creds)    
-
-    results = search_client.upload_documents(documents=chunks)
-    succeeded = sum([1 for r in results if r.succeeded])
-    log.debug(f"\tIndexed {len(results)} chunks, {succeeded} succeeded")
+                                    credential=search_creds)
+    search_client.index_documents(chunks)
 
 def get_tags_and_upload_to_cosmos(blob_service_client, blob_path):
     """ Gets the tags from the blob metadata and uploads them to cosmos db"""
@@ -386,9 +461,8 @@ def poll_queue() -> None:
                         chunk_dict["content"]
                     )
 
-                # create embedding
-                embedding = embed_texts(target_embeddings_model, [text])
-                embedding_data = embedding['data']
+                # logic added because weaviate does embedding internally
+                embedding_data = None if IS_CONTAINERIZED_DEPLOYMENT else embed_texts(target_embeddings_model, [text])['data']
 
                 tag_list = get_tags_and_upload_to_cosmos(blob_service_client, chunk_dict["file_name"])
 
@@ -447,6 +521,7 @@ def poll_queue() -> None:
                 statusLog.upsert_document(blob_path, f'Message requed to embeddings queue, attempt {str(requeue_count)}. Visible in {str(backoff)} seconds. Error: {str(error)}.',
                                           StatusClassification.ERROR,
                                           State.QUEUED)
+                log.debug(f'Message requed to embeddings queue, attempt {str(requeue_count)}. Visible in {str(backoff)} seconds. Error: {str(error)}.')
             else:
                 # max retries has been reached
                 statusLog.upsert_document(
@@ -455,6 +530,7 @@ def poll_queue() -> None:
                     StatusClassification.ERROR,
                     State.ERROR,
                 )
+                log.debug(f"An error occurred, max requeue limit was reached. Error description: {str(error)}")
 
         statusLog.save_document(blob_path)
 

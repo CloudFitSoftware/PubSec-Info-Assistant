@@ -61,6 +61,8 @@ spec:
             value: "{{ .Values.enrichment.env.embeddingsqueue }}"
           - name: ENABLE_ORYX_BUILD
             value: "{{ .Values.enrichment.env.enableoryxbuild }}"
+          - name: IS_CONTAINERIZED_DEPLOYMENT
+            value: "{{ .Values.enrichment.env.isContainerizedDeployment }}"
           - name: IS_GOV_CLOUD_DEPLOYMENT
             value: "{{ .Values.enrichment.env.isgovclouddeployment }}"
           - name: LOG_LEVEL
@@ -75,12 +77,25 @@ spec:
             value: "{{ .Values.enrichment.env.websitehttploggingretentiondays }}"
           - name: WEBSITES_CONTAINER_START_TIME_LIMIT
             value: "{{ .Values.enrichment.env.websitescontainerstarttimelimit }}"
+          - name: WEAVIATE_URL
+            value: "{{ .Values.enrichment.env.weaviateUrl }}"
         resources:
           limits:
             memory: "12G"
             cpu: "500m"
         ports:
           - containerPort: 5000
-
-
-
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infoasst-enrichment
+  namespace: infoasst
+spec:
+  type: ClusterIP
+  ports:
+  - name: "80"
+    port: 80
+    targetPort: 5000
+  selector:
+    app: infoasst-enrichment
