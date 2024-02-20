@@ -32,6 +32,7 @@ webapp:
     embeddingdeploymentname: ${AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME}
     enableoryxbuild: true
     enrichmentappservicename: ${ENRICHMENT_APPSERVICE_NAME}
+    isContainerizedDeployment: ${IS_CONTAINERIZED_DEPLOYMENT}
     isgovclouddeployment: ${IS_USGOV_DEPLOYMENT}
     querytermlanguage: ${PROMPT_QUERYTERM_LANGUAGE}
     scmdobuildduringdeployment: true

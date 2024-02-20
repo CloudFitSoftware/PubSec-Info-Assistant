@@ -26,6 +26,7 @@ enrichment:
     embeddingvectorsize: 1536
     embeddingsqueue: embeddings-queue
     enableoryxbuild: true
+    isContainerizedDeployment: ${IS_CONTAINERIZED_DEPLOYMENT}
     isgovclouddeployment: ${IS_GOV_CLOUD_DEPLOYMENT}
     loglevel: DEBUG
     maxembeddingrequeuecount: 5
@@ -33,6 +34,7 @@ enrichment:
     targetembeddingsmodel: ${TARGET_EMBEDDINGS_MODEL}
     websitehttploggingretentiondays: 1
     websitescontainerstarttimelimit: 600
+    weaviateUrl: infoasst-weaviate.infoasst.svc.cluster.local:8080
 
   service:
     pipname:

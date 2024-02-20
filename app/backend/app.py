@@ -66,6 +66,8 @@ QUERY_TERM_LANGUAGE = os.environ.get("QUERY_TERM_LANGUAGE") or "English"
 TARGET_EMBEDDING_MODEL = os.environ.get("TARGET_EMBEDDINGS_MODEL") or "BAAI/bge-small-en-v1.5"
 ENRICHMENT_APPSERVICE_NAME = os.environ.get("ENRICHMENT_APPSERVICE_NAME") or "enrichment"
 
+IS_CONTAINERIZED_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_CONTAINERIZED_DEPLOYMENT", "").lower()) or False
+
 # embedding_service_suffix = "xyoek"
 
 # Use the current user identity to authenticate with Azure OpenAI, Cognitive Search and Blob Storage (no secrets needed,
@@ -174,6 +176,7 @@ chat_approaches = {
         model_name,
         model_version,
         IS_GOV_CLOUD_DEPLOYMENT,
+        IS_CONTAINERIZED_DEPLOYMENT,
         TARGET_EMBEDDING_MODEL,
         ENRICHMENT_APPSERVICE_NAME
     )

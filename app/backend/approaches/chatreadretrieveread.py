@@ -110,6 +110,7 @@ class ChatReadRetrieveReadApproach(Approach):
         model_name: str,
         model_version: str,
         is_gov_cloud_deployment: str,
+        IS_CONTAINERIZED_DEPLOYMENT: str,
         TARGET_EMBEDDING_MODEL: str,
         ENRICHMENT_APPSERVICE_NAME: str
     ):
@@ -126,11 +127,17 @@ class ChatReadRetrieveReadApproach(Approach):
         #escape target embeddiong model name
         self.escaped_target_model = re.sub(r'[^a-zA-Z0-9_\-.]', '_', TARGET_EMBEDDING_MODEL)
         
+        if IS_CONTAINERIZED_DEPLOYMENT:
+            self.embedding_service_url = f'http://infoasst-enrichment.infoasst.svc.cluster.local'
+        else:
+            if is_gov_cloud_deployment:
+                self.embedding_service_url = f'https://{ENRICHMENT_APPSERVICE_NAME}.azurewebsites.us'
+            else:
+                self.embedding_service_url = f'https://{ENRICHMENT_APPSERVICE_NAME}.azurewebsites.net'
+        
         if is_gov_cloud_deployment:
-            self.embedding_service_url = f'https://{ENRICHMENT_APPSERVICE_NAME}.azurewebsites.us'
             openai.api_base = 'https://' + oai_service_name + '.openai.azure.us/'
         else:
-            self.embedding_service_url = f'https://{ENRICHMENT_APPSERVICE_NAME}.azurewebsites.net'
             openai.api_base = 'https://' + oai_service_name + '.openai.azure.com/'
         
         openai.api_type = 'azure'

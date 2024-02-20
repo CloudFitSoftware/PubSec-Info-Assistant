@@ -109,6 +109,9 @@
     },
     "applicationtitle": {
       "value": "${APPLICATION_TITLE}"
+    },
+    "isContainerizedDeployment": {
+      "value": ${IS_CONTAINERIZED_DEPLOYMENT}
     }
   }
 }

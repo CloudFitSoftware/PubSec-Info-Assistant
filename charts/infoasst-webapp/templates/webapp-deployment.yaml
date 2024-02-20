@@ -71,6 +71,8 @@ spec:
             value: "{{ .Values.webapp.env.enableoryxbuild }}"
           - name: ENRICHMENT_APPSERVICE_NAME
             value: "{{ .Values.webapp.env.enrichmentappservicename }}"
+          - name: IS_CONTAINERIZED_DEPLOYMENT
+            value: "{{ .Values.webapp.env.isContainerizedDeployment }}"
           - name: IS_GOV_CLOUD_DEPLOYMENT
             value: "{{ .Values.webapp.env.isgovclouddeployment }}"
           - name: QUERY_TERM_LANGUAGE
@@ -95,9 +97,6 @@ kind: Service
 metadata:
   name: infoasst-webapp
   namespace: infoasst
-  annotations:
-    service.beta.kubernetes.io/azure-pip-name: {{ .Values.webapp.service.pipname }}
-    service.beta.kubernetes.io/azure-load-balancer-resource-group: {{ .Values.webapp.service.pipresourcegroup }}
 spec:
   type: LoadBalancer
   ports:
