@@ -96,7 +96,7 @@ class ChatReadRetrieveReadApproach(Approach):
     
     def __init__(
         self,
-        search_client: SearchClient,
+        search_client: str,
         oai_service_name: str,
         oai_service_key: str,
         chatgpt_deployment: str,
@@ -146,6 +146,8 @@ class ChatReadRetrieveReadApproach(Approach):
         self.model_name = model_name
         self.model_version = model_version
         self.is_gov_cloud_deployment = is_gov_cloud_deployment
+        self.IS_CONTAINERIZED_DEPLOYMENT = IS_CONTAINERIZED_DEPLOYMENT
+
         
 
     # def run(self, history: list[dict], overrides: dict) -> any:
@@ -230,24 +232,29 @@ class ChatReadRetrieveReadApproach(Approach):
 
         #  hybrid semantic search using semantic reranker
        
-        if (not self.is_gov_cloud_deployment and overrides.get("semantic_ranker")):
-            r = self.search_client.search(
-                generated_query,
-                query_type=QueryType.SEMANTIC,
-                query_language="en-us",
-                # query_language=self.query_term_language,
-                query_speller="lexicon",
-                semantic_configuration_name="default",
-                top=top,
-                query_caption="extractive|highlight-false"
-                if use_semantic_captions else None,
-                vector_queries =[vector],
-                filter=search_filter
-            )
+        if self.IS_CONTAINERIZED_DEPLOYMENT:
+
+            r = self.search_client.query(top=top, query=generated_query)
+
         else:
-            r = self.search_client.search(
-                generated_query, top=top,vector_queries =[vector], filter=search_filter
-            )
+            if (not self.is_gov_cloud_deployment and overrides.get("semantic_ranker")):
+                r = self.search_client.search(
+                    generated_query,
+                    query_type=QueryType.SEMANTIC,
+                    query_language="en-us",
+                    # query_language=self.query_term_language,
+                    query_speller="lexicon",
+                    semantic_configuration_name="default",
+                    top=top,
+                    query_caption="extractive|highlight-false"
+                    if use_semantic_captions else None,
+                    vector_queries =[vector],
+                    filter=search_filter
+                )
+            else:
+                r = self.search_client.search(
+                    generated_query, top=top,vector_queries =[vector], filter=search_filter
+                )
 
         citation_lookup = {}  # dict of "FileX" moniker to the actual file name
         results = []  # list of results to be used in the prompt
@@ -262,29 +269,50 @@ class ChatReadRetrieveReadApproach(Approach):
         # # Only include results where search.score is greater than cutoff_score
         # filtered_results = [doc for doc in r if doc['@search.score'] > cutoff_score]
         # # print("Filtered Results: ", len(filtered_results))
-        
-      
+        if self.IS_CONTAINERIZED_DEPLOYMENT:
+            counter = 0
+            for result in r:
+                text = result['text']
+                title = result['title']
+                source = result['source']
+                score = result['_additional']['score']
+                rerank_score = result['_additional']['rerank'][0]['score']
+                results.append(
+                    f"File{score} " + "| " + nonewlines(text)
+                    ) 
 
-        for idx, doc in enumerate(r):  # for each document in the search results
-            # include the "FileX" moniker in the prompt, and the actual file name in the response
-            results.append(
-                f"File{idx} " + "| " + nonewlines(doc[self.content_field])
-            )
-            data_points.append(
-               "/".join(urllib.parse.unquote(doc[self.source_file_field]).split("/")[4:]
-                ) + "| " + nonewlines(doc[self.content_field])
+                data_points.append(
+                "/".join(urllib.parse.unquote(title).split("/")[4:]
+                    ) + "| " + nonewlines(text)
+                    )
+
+                citation_lookup[f"File{score}"] = {
+                    "citation": urllib.parse.unquote("https://" + source.split("/")[2] + f"/{self.content_storage_container}/" + source.split("/")[4] + "/" + source.split("/")[4].split(".")[0] + "-" + str(counter) + ".json"),
+                    "source_path": self.get_source_file_with_sas(source),
+                    "page_number": "0",
+                }         
+                counter = counter + 1
+        else:
+            for idx, doc in enumerate(r):  # for each document in the search results
+                # include the "FileX" moniker in the prompt, and the actual file name in the response
+                results.append(
+                    f"File{idx} " + "| " + nonewlines(doc[self.content_field])
                 )
-            # uncomment to debug size of each search result content_field
-            # print(f"File{idx}: ", self.num_tokens_from_string(f"File{idx} " + /
-            #  "| " + nonewlines(doc[self.content_field]), "cl100k_base"))
+                data_points.append(
+                "/".join(urllib.parse.unquote(doc[self.source_file_field]).split("/")[4:]
+                    ) + "| " + nonewlines(doc[self.content_field])
+                    )
+                # uncomment to debug size of each search result content_field
+                # print(f"File{idx}: ", self.num_tokens_from_string(f"File{idx} " + /
+                #  "| " + nonewlines(doc[self.content_field]), "cl100k_base"))
 
-            # add the "FileX" moniker and full file name to the citation lookup
-            citation_lookup[f"File{idx}"] = {
-                "citation": urllib.parse.unquote("https://" + doc[self.source_file_field].split("/")[2] + f"/{self.content_storage_container}/" + doc[self.chunk_file_field]),
-                "source_path": self.get_source_file_with_sas(doc[self.source_file_field]),
-                "page_number": str(doc[self.page_number_field][0]) or "0",
-             }
-            
+                # add the "FileX" moniker and full file name to the citation lookup
+                citation_lookup[f"File{idx}"] = {
+                    "citation": urllib.parse.unquote("https://" + doc[self.source_file_field].split("/")[2] + f"/{self.content_storage_container}/" + doc[self.chunk_file_field]),
+                    "source_path": self.get_source_file_with_sas(doc[self.source_file_field]),
+                    "page_number": str(doc[self.page_number_field][0]) or "0",
+                }
+                
 
         # create a single string of all the results to be used in the prompt
         results_text = "".join(results)

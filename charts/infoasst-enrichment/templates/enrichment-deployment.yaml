@@ -81,7 +81,7 @@ spec:
             value: "{{ .Values.enrichment.env.weaviateUrl }}"
         resources:
           limits:
-            memory: "12G"
+            memory: "8G"
             cpu: "500m"
         ports:
           - containerPort: 5000

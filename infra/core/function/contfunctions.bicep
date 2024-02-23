@@ -165,7 +165,7 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
       minimumElasticInstanceCount: 1
       numberOfWorkers: 1
       http20Enabled: false
-      linuxFxVersion: 'DOCKER|${acrEndpoint}/${imageName}:${imageTag}'
+      linuxFxVersion: 'DOCKER|${acrEndpoint}${imageName}:${imageTag}'
       alwaysOn: true
       minTlsVersion: '1.2'
       connectionStrings: [

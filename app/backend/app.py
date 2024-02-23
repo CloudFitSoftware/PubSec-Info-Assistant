@@ -26,6 +26,8 @@ from azure.storage.blob import (
 from flask import Flask, jsonify, request
 from shared_code.status_log import State, StatusClassification, StatusLog
 from shared_code.tags_helper import TagsHelper
+import weaviate
+from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
 
 str_to_bool = {'true': True, 'false': False}
 # Replace these with your own values, either in environment variables or directly here
@@ -36,6 +38,7 @@ AZURE_KEYVAULT_NAME = os.environ.get("AZURE_KEYVAULT_NAME") or ""
 AZURE_SEARCH_SERVICE = os.environ.get("AZURE_SEARCH_SERVICE") or "gptkb"
 AZURE_SEARCH_SERVICE_ENDPOINT = os.environ.get("AZURE_SEARCH_SERVICE_ENDPOINT")
 AZURE_SEARCH_INDEX = os.environ.get("AZURE_SEARCH_INDEX") or "gptkbindex"
+
 AZURE_OPENAI_SERVICE = os.environ.get("AZURE_OPENAI_SERVICE") or "myopenai"
 AZURE_OPENAI_RESOURCE_GROUP = os.environ.get("AZURE_OPENAI_RESOURCE_GROUP") or ""
 AZURE_OPENAI_CHATGPT_DEPLOYMENT = (os.environ.get("AZURE_OPENAI_CHATGPT_DEPLOYMENT") or "gpt-35-turbo-16k")
@@ -67,6 +70,8 @@ TARGET_EMBEDDING_MODEL = os.environ.get("TARGET_EMBEDDINGS_MODEL") or "BAAI/bge-
 ENRICHMENT_APPSERVICE_NAME = os.environ.get("ENRICHMENT_APPSERVICE_NAME") or "enrichment"
 
 IS_CONTAINERIZED_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_CONTAINERIZED_DEPLOYMENT", "").lower()) or False
+WEAVIATE_URL = os.environ.get("WEAVIATE_URL", "") 
+WEAVIATE_INDEX_NAME = os.environ.get("WEAVIATE_INDEX", "WEAVIATE")
 
 # embedding_service_suffix = "xyoek"
 
@@ -113,12 +118,66 @@ tagsHelper = TagsHelper(
 openai.api_key = AZURE_OPENAI_SERVICE_KEY
 
 # Set up clients for Cognitive Search and Storage
+class WeaviateSearch:
+    """A wrapper for a Weaviate search client."""
+    def __init__(self, url, index_name):
+        self.url = url
+        self.index_name = WEAVIATE_INDEX_NAME  
+        self.weaviate_client = weaviate.Client(url)
 
-search_client = SearchClient(
-    endpoint=AZURE_SEARCH_SERVICE_ENDPOINT,
-    index_name=AZURE_SEARCH_INDEX,
-    credential=azure_search_key_credential,
-)
+        # if index isn't created, create it
+        if not self.weaviate_client.schema.exists(index_name):
+            class_obj = {
+                    "class": index_name,
+                    "vectorizer": "text2vec-transformers",
+                    "moduleConfig": {
+                        "reranker-transformers": {
+                            "model": "cross-encoder-ms-marco-MiniLM-L-6-v2",
+                        }
+                    },
+            }
+            self.weaviate_client.schema.create_class(class_obj)
+     
+        self.search_client = WeaviateHybridSearchRetriever(
+                    client=self.weaviate_client,
+                    index_name=index_name,
+                    text_key="text",
+                    # k=10,
+                    # alpha=0.50,
+                    attributes=[],
+                    create_schema_if_missing=True,
+                )
+        
+    def query(self, top, query):
+
+        limit = top if top > 10 else 10  # Limit the number of results to 10
+ 
+        # hybrid search
+        response = (
+            self.weaviate_client.query
+            .get(self.index_name, ["text", "source", "title",  "language"])
+            .with_hybrid(
+                query=query,
+            )
+            .with_additional("score") # "explainScore"
+            .with_additional('rerank(property: "text") { score }')
+            .with_limit(limit) # take the top results prior to reranking
+            .do()
+        ).get('data', {}).get('Get', {}).get(WEAVIATE_INDEX_NAME, [])[:top] 
+
+        return response
+
+if IS_CONTAINERIZED_DEPLOYMENT:
+    search_client = WeaviateSearch(
+        url=WEAVIATE_URL, 
+        index_name=WEAVIATE_INDEX_NAME
+    )
+else:
+    search_client = SearchClient(
+        endpoint=AZURE_SEARCH_SERVICE_ENDPOINT,
+        index_name=AZURE_SEARCH_INDEX,
+        credential=azure_search_key_credential,
+    )
 blob_client = BlobServiceClient(
     account_url=AZURE_BLOB_STORAGE_ENDPOINT,
     credential=AZURE_BLOB_STORAGE_KEY,
@@ -308,7 +367,7 @@ def get_citation():
         decoded_text = blob.readall().decode()
         results = jsonify(json.loads(decoded_text))
     except Exception as ex:
-        logging.exception("Exception in /getalluploadstatus")
+        logging.exception("Exception in /getcitation")
         return jsonify({"error": str(ex)}), 500
     return jsonify(results.json)
 

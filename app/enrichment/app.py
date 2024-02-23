@@ -83,6 +83,8 @@ IS_CONTAINERIZED_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_CONTAINERIZED_D
 
 WEAVIATE_URL = os.environ.get("WEAVIATE_URL", "") 
 
+WEAVIATE_INDEX_NAME = os.environ.get("WEAVIATE_INDEX", "WEAVIATE")
+
 AZURE_KEY_VAULT_NAME = os.environ.get("AZURE_KEY_VAULT_NAME") or ""
 azure_credential = DefaultAzureCredential()
 
@@ -296,7 +298,7 @@ class WeaviateSearch:
     """A wrapper for a Weaviate search client."""
     def __init__(self, url, index_name):
         self.url = url
-
+        self.index_name = index_name
         # add other credentials needed here
         self.weaviate_client = weaviate.Client(url)
 
@@ -334,10 +336,10 @@ class WeaviateSearch:
             None
         """
         # convert to Document objects
-        chunks = [Document(page_content=chunk["page_content"], 
-                   metadata={"title": chunk['title'], #translated title?
-                         "source": chunk['file_uri'],
-                         "language":  "en-US" }) #defaulting, can we pull from somewhere?
+        chunks = [Document(page_content=chunk["content"], 
+                metadata={"title": chunk['title'], #translated title?
+                        "source": chunk['file_uri'],
+                        "language":  "en-US" }) #defaulting, can we pull from somewhere?
                 for chunk in chunks]
         
         # add documents to weaviate
@@ -353,7 +355,7 @@ def index_sections(chunks):
     """ Pushes a batch of content to the search index based on deployment type
     """
     if IS_CONTAINERIZED_DEPLOYMENT:
-        search_client = WeaviateSearch(url=WEAVIATE_URL)
+        search_client = WeaviateSearch(url=WEAVIATE_URL, index_name=WEAVIATE_INDEX_NAME)
     else:
         search_client = AzureSearch(endpoint=ENV["AZURE_SEARCH_SERVICE_ENDPOINT"],
                                     index_name=ENV["AZURE_SEARCH_INDEX"],

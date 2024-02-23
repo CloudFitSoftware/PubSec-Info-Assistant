@@ -39,6 +39,7 @@ webapp:
     targetembeddingsmodel: ${TARGET_EMBEDDINGS_MODEL}
     useazureopenaiembeddings: ${USE_AZURE_OPENAI_EMBEDDINGS}
     websitehttploggingretentiondays: 1
+    weaviateUrl: http://infoasst-weaviate.infoasst.svc.cluster.local:8080
 
   service:
     pipname:
