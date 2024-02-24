@@ -34,7 +34,7 @@ enrichment:
     targetembeddingsmodel: ${TARGET_EMBEDDINGS_MODEL}
     websitehttploggingretentiondays: 1
     websitescontainerstarttimelimit: 600
-    weaviateUrl: infoasst-weaviate.infoasst.svc.cluster.local:8080
+    weaviateUrl: http://infoasst-weaviate.infoasst.svc.cluster.local:8080
 
   service:
     pipname:

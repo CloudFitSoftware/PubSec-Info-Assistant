@@ -11,5 +11,5 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   }
 }
 
-output endpoint string = (isGovCloudDeployment) ? 'https://${clusterName}.azurecr.us/' : 'https://${clusterName}.azurecr.io/'
+output endpoint string = isGovCloudDeployment ? '${clusterName}.azurecr.us/' : '${clusterName}.azurecr.io/'
 output acrName string = clusterName
