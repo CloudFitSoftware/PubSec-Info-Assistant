@@ -89,7 +89,7 @@ spec:
             value: "{{ .Values.webapp.env.weaviateUrl }}"
         resources:
           limits:
-            memory: "6G"
+            memory: "4G"
             cpu: "250m"
         ports:
           - containerPort: 80

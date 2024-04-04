@@ -8,7 +8,8 @@ import urllib.parse
 from datetime import datetime, timedelta
 
 import openai
-from approaches.chatreadretrieveread import ChatReadRetrieveReadApproach
+from approaches.chatreadretrieveread_openai import ChatReadRetrieveReadApproachOpenAI
+from approaches.chatreadretrieveread_mistral import ChatReadRetrieveReadApproachMistral
 from azure.core.credentials import AzureKeyCredential
 from azure.identity import (
     AzureAuthorityHosts,
@@ -188,60 +189,88 @@ model_name = ''
 model_version = ''
 
 # Set up OpenAI management client
-if (IS_GOV_CLOUD_DEPLOYMENT):
-    openai_mgmt_client = CognitiveServicesManagementClient(
-        credential=azure_credential,
-        subscription_id=AZURE_SUBSCRIPTION_ID,
-        base_url="https://management.usgovcloudapi.net",
-        credential_scopes=["https://management.usgovcloudapi.net/.default"])
-else:
-    openai_mgmt_client = CognitiveServicesManagementClient(
-        credential=azure_credential,
-        subscription_id=AZURE_SUBSCRIPTION_ID)
-
-deployment = openai_mgmt_client.deployments.get(
-    resource_group_name=AZURE_OPENAI_RESOURCE_GROUP,
-    account_name=AZURE_OPENAI_SERVICE,
-    deployment_name=AZURE_OPENAI_CHATGPT_DEPLOYMENT)
-
-model_name = deployment.properties.model.name
-model_version = deployment.properties.model.version
-
-if USE_AZURE_OPENAI_EMBEDDINGS:
-    embedding_deployment = openai_mgmt_client.deployments.get(
-        resource_group_name=AZURE_OPENAI_RESOURCE_GROUP,
-        account_name=AZURE_OPENAI_SERVICE,
-        deployment_name=EMBEDDING_DEPLOYMENT_NAME)
-
-    embedding_model_name = embedding_deployment.properties.model.name
-    embedding_model_version = embedding_deployment.properties.model.version
-else:
+if IS_CONTAINERIZED_DEPLOYMENT:
+    model_name = "mistral"
+    model_version = ""
     embedding_model_name = ""
     embedding_model_version = ""
+else:
+    if (IS_GOV_CLOUD_DEPLOYMENT):
+        openai_mgmt_client = CognitiveServicesManagementClient(
+            credential=azure_credential,
+            subscription_id=AZURE_SUBSCRIPTION_ID,
+            base_url="https://management.usgovcloudapi.net",
+            credential_scopes=["https://management.usgovcloudapi.net/.default"])
+    else:
+        openai_mgmt_client = CognitiveServicesManagementClient(
+            credential=azure_credential,
+            subscription_id=AZURE_SUBSCRIPTION_ID)
 
-chat_approaches = {
-    "rrr": ChatReadRetrieveReadApproach(
-        search_client,
-        AZURE_OPENAI_SERVICE,
-        AZURE_OPENAI_SERVICE_KEY,
-        AZURE_OPENAI_CHATGPT_DEPLOYMENT,
-        KB_FIELDS_SOURCEFILE,
-        KB_FIELDS_CONTENT,
-        KB_FIELDS_PAGENUMBER,
-        KB_FIELDS_CHUNKFILE,
-        AZURE_BLOB_STORAGE_CONTAINER,
-        blob_client,
-        QUERY_TERM_LANGUAGE,
-        model_name,
-        model_version,
-        IS_GOV_CLOUD_DEPLOYMENT,
-        IS_CONTAINERIZED_DEPLOYMENT,
-        TARGET_EMBEDDING_MODEL,
-        ENRICHMENT_APPSERVICE_NAME
-    )
-}
+    deployment = openai_mgmt_client.deployments.get(
+        resource_group_name=AZURE_OPENAI_RESOURCE_GROUP,
+        account_name=AZURE_OPENAI_SERVICE,
+        deployment_name=AZURE_OPENAI_CHATGPT_DEPLOYMENT)
 
+    model_name = deployment.properties.model.name
+    model_version = deployment.properties.model.version
+
+    if USE_AZURE_OPENAI_EMBEDDINGS:
+        embedding_deployment = openai_mgmt_client.deployments.get(
+            resource_group_name=AZURE_OPENAI_RESOURCE_GROUP,
+            account_name=AZURE_OPENAI_SERVICE,
+            deployment_name=EMBEDDING_DEPLOYMENT_NAME)
+
+        embedding_model_name = embedding_deployment.properties.model.name
+        embedding_model_version = embedding_deployment.properties.model.version
+    else:
+        embedding_model_name = ""
+        embedding_model_version = ""
+
+
+if IS_CONTAINERIZED_DEPLOYMENT:
+    if model_name == "mistral":
+        chat_approaches = {
+            "rrr": ChatReadRetrieveReadApproachMistral(
+                search_client,
+                KB_FIELDS_SOURCEFILE,
+                KB_FIELDS_CONTENT,
+                KB_FIELDS_PAGENUMBER,
+                KB_FIELDS_CHUNKFILE,
+                AZURE_BLOB_STORAGE_CONTAINER,
+                blob_client,
+                QUERY_TERM_LANGUAGE,
+                model_name,
+                model_version,
+                IS_GOV_CLOUD_DEPLOYMENT,
+                IS_CONTAINERIZED_DEPLOYMENT,
+                TARGET_EMBEDDING_MODEL,
+            )
+        }
+else:
+    chat_approaches = {
+        "rrr": ChatReadRetrieveReadApproachOpenAI(
+            search_client,
+            AZURE_OPENAI_SERVICE,
+            AZURE_OPENAI_SERVICE_KEY,
+            AZURE_OPENAI_CHATGPT_DEPLOYMENT,
+            KB_FIELDS_SOURCEFILE,
+            KB_FIELDS_CONTENT,
+            KB_FIELDS_PAGENUMBER,
+            KB_FIELDS_CHUNKFILE,
+            AZURE_BLOB_STORAGE_CONTAINER,
+            blob_client,
+            QUERY_TERM_LANGUAGE,
+            model_name,
+            model_version,
+            IS_GOV_CLOUD_DEPLOYMENT,
+            IS_CONTAINERIZED_DEPLOYMENT,
+            TARGET_EMBEDDING_MODEL,
+            ENRICHMENT_APPSERVICE_NAME
+        )
+    }
 app = Flask(__name__)
+app.logger.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 @app.route("/", defaults={"path": "index.html"})
 @app.route("/<path:path>")

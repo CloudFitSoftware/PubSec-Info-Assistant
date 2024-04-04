@@ -1,6 +1,7 @@
 param aksIdentityType string
 param aksSku object
-param aksVmSize string
+param aksSystemVmSize string
+param aksUserVmSize string
 param clusterName string
 param keyVaultName string = ''
 param location string
@@ -22,7 +23,14 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-05-02-preview' = {
         name: 'agentpool'
         enableAutoScaling: false
         count: 2
-        vmSize: aksVmSize
+        vmSize: aksSystemVmSize
+      }
+      {
+        mode: 'User'
+        name: 'infoasst'
+        enableAutoScaling: false
+        count: 1
+        vmSize: aksUserVmSize
       }
     ]
   }

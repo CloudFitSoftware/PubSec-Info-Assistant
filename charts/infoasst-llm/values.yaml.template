@@ -1,0 +1,14 @@
+images: 
+  llm:
+    repository: ${CONTAINER_REGISTRY_NAME}.azurecr.us/llm
+    label: latest
+
+llm:
+  env:
+    modelname: mistral
+    maxtokenresponse: 4096
+    logresponses: True
+    temperature: 0.7
+    topk: 50
+    topp: 0.9
+

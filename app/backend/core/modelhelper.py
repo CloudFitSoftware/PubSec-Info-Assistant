@@ -1,4 +1,7 @@
 import tiktoken
+import os
+str_to_bool = {'true': True, 'false': False}
+IS_CONTAINERIZED_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_CONTAINERIZED_DEPLOYMENT", "").lower()) or False
 
 #Values from https://platform.openai.com/docs/models/gpt-3-5
 
@@ -8,7 +11,12 @@ MODELS_2_TOKEN_LIMITS = {
     "gpt-35-turbo-16k": 16385,
     "gpt-3.5-turbo-16k": 16385,
     "gpt-4": 8192,
-    "gpt-4-32k": 32768
+    "gpt-4-32k": 32768,
+    "dollyv2": 4096,
+    "phi-2": 4096,
+    "falcon": 4096,
+    "mixtral":4096,
+    "mistral": 4096
 }
 
 AOAI_2_OAI = {
@@ -37,10 +45,14 @@ def num_tokens_from_messages(message: dict[str, str], model: str) -> int:
         num_tokens_from_messages(message, model)
         output: 11
     """
-    encoding = tiktoken.encoding_for_model(get_oai_chatmodel_tiktok(model))
-    num_tokens = 2  # For "role" and "content" keys
-    for key, value in message.items():
-        num_tokens += len(encoding.encode(value))
+    if IS_CONTAINERIZED_DEPLOYMENT:
+        num_tokens = 4096
+    else:
+        encoding = tiktoken.encoding_for_model(get_oai_chatmodel_tiktok(model))
+        num_tokens = 2  # For "role" and "content" keys
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(value))
+        
     return num_tokens
 
 
