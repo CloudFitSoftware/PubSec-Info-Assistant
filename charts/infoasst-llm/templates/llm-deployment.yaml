@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infoasst-llm
+  namespace: infoasst
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: infoasst-llm
+  template:
+    metadata:
+      labels:
+        app: infoasst-llm
+    spec:
+      containers:
+      - name: infoasst-llm
+        image: {{ .Values.images.llm.repository }}:{{ .Values.images.llm.label }}
+        env:
+          - name: MAX_TOKEN_RESPONSE
+            value: "{{ .Values.llm.env.maxtokenresponse }}"
+          - name: MODEL_NAME
+            value: "{{ .Values.llm.env.modelname }}"
+          - name: LOG_RESPONSES
+            value: "{{ .Values.llm.env.logresponses }}"
+          - name: TEMPERATURE
+            value: "{{ .Values.llm.env.temperature }}"
+          - name: TOP_K
+            value: "{{ .Values.llm.env.topk }}"
+          - name: TOP_P
+            value: "{{ .Values.llm.env.topp }}"
+        resources:
+          limits:
+            memory: "96G"
+            cpu: "4"
+            nvidia.com/gpu: 1 # requesting 1 GP
+        ports:
+          - containerPort: 6001
+        volumeMounts:
+          - name: infoasst-llms
+            mountPath: /app/models
+            readOnly: false
+      nodeSelector:
+        agentpool: infoasst
+      volumes:
+        - name: infoasst-llms
+          csi:
+            driver: file.csi.azure.com
+            volumeAttributes:
+              secretName: infoasst-llms-share  # required
+              shareName: llms  # required
+              mountOptions: 'dir_mode=0777,file_mode=0777,cache=strict,actimeo=30,nosharesock'  # optional
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infoasst-llm
+  namespace: infoasst
+spec:
+  type: ClusterIP
+  ports:
+  - name: "8080"
+    port: 8080
+    targetPort: 6001
+  selector:
+    app: infoasst-llm
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    pv.kubernetes.io/provisioned-by: file.csi.azure.com
+  name: pv-infoasst-llms
+spec:
+  capacity:
+    storage: 150Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: azurefile-csi
+  csi:
+    driver: file.csi.azure.com
+    volumeHandle: infoasst-llms  # make sure this volumeid is unique for every identical share in the cluster
+    volumeAttributes:
+      resourceGroup: infoasst-shared-ai  # optional, only set this when storage account is not in the same resource group as node
+      shareName: llms
+    nodeStageSecretRef:
+      name: infoasst-llms-share
+      namespace: infoasst
+  mountOptions:
+    - dir_mode=0777
+    - file_mode=0777
+    - uid=0
+    - gid=0
+    - mfsymlinks
+    - cache=strict
+    - nosharesock
+    - nobrl
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-infoasst-llms
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile-csi
+  volumeName: pv-infoasst-llms
+  resources:
+    requests:
+      storage: 155Gi

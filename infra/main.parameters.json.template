@@ -2,6 +2,9 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "aksUserVmSize": {
+      "value": "${AKS_USER_AGENTPOOL_SKU}"
+    },
     "environmentName": {
       "value": "${WORKSPACE}"
     },
@@ -112,6 +115,15 @@
     },
     "isContainerizedDeployment": {
       "value": ${IS_CONTAINERIZED_DEPLOYMENT}
+    },
+    "useExistingAcr": {
+      "value": ${USE_EXISTING_ACR}
+    },
+    "existingAcrName": {
+      "value": "${ACR_NAME}"
+    },
+    "existingAcrResourceGroup": {
+      "value": "${ACR_RESOURCE_GROUP}"
     }
   }
 }

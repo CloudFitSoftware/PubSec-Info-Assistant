@@ -4,7 +4,6 @@
 > As of November 15, 2023, Azure Cognitive Search has been renamed to Azure AI Search. Azure Cognitive Services have also been renamed to Azure AI Services.
 
 ## Table of Contents
-
 - [Features](#features)
 - [Azure account requirements](#azure-account-requirements)
 - [Azure Deployment](./docs/deployment/deployment.md)
@@ -15,6 +14,9 @@
   - [Deploying to Azure](./docs/deployment/deployment.md#deploy-and-configure-azure-resources)
   - [Troubleshooting Common Issues](./docs/deployment/troubleshooting.md)
   - [Considerations for Production Adoption](./docs/deployment/considerations_production.md)
+- [Containerized Deployment](./docs/deployment/containerized-deployment.md)
+  - [Deployment with Existing OpenAI Instance](./docs/deployment/containerized-deployment.md#deployment-with-existing-openai-instance)
+  - [Deployment for Disconnected Scenarios](./docs/deployment/containerized-deployment.md#deployment-for-disconnected-scenarios)
 - [Enabling optional features](./docs/features/optional_features.md)
 - [Using the app](/docs/deployment/using_ia_first_time.md)
 - [Responsible AI](#responsible-ai)

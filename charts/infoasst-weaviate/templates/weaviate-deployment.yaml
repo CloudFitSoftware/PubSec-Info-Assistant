@@ -27,7 +27,7 @@ spec:
             value: "{{ .Values.weaviate.env.rerankerinferenceapi }}"
         resources:
           limits:
-            memory: "12G"
+            memory: "6G"
             cpu: "500m"
         ports:
           - containerPort: 8080

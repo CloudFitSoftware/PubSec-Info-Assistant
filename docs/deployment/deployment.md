@@ -70,6 +70,13 @@ DEFAULT_LANGUAGE | Yes | Use the parameter to specify the matching ENV file loca
 ENABLE_CUSTOMER_USAGE_ATTRIBUTION <br>CUSTOMER_USAGE_ATTRIBUTION_ID | No | By default, **ENABLE_CUSTOMER_USAGE_ATTRIBUTION** is set to `true`. The CUA GUID which is pre-configured will tell Microsoft about the usage of this software. Please see [Data Collection Notice](/README.md#data-collection-notice) for more information. <br/><br/>You may provide your own CUA GUID by changing the value in **CUSTOMER_USAGE_ATTRIBUTION_ID**. Ensure you understand how to properly notify your customers by reading <https://learn.microsoft.com/en-us/partner-center/marketplace/azure-partner-customer-usage-attribution#notify-your-customers>.<br/><br/>To disable data collection, set **ENABLE_CUSTOMER_USAGE_ATTRIBUTION** to `false`.
 ENABLE_DEV_CODE | No | Defaults to `false`. It is not recommended to enable this flag, it is for development testing scenarios only.
 APPLICATION_TITLE | No | Defaults to "". Providing a value for this parameter will replace the Information Assistant's title in the black banner at the top of the UX.
+IS_CONTAINERIZED_DEPLOYMENT | Yes | If true, application deploys containerized, uses LLM in fileshare, and leverages weaviate instead of Azure Search
+AKS_USER_AGENTPOOL_SKU | Yes if IS_CONTAINERIZED_DEPLOYMENT, else No | The following setting is for the pool that will run the LLM. The NCv3 SKUs require quota limit increases. The NC series have nVidia GPUs that greatly improve the performance of the LLM.  Any other SKU will have severe impacts on the time it takes to generate responses. 
+REQUIRE_WEBSITE_SECURITY_MEMBERSHIP | Yes | # Use this setting to determine whether a user needs to be granted explicit access to the website via an Azure AD Enterprise Application membership (true) or allow the website to be available to anyone in the Azure tenant (false). Defaults to false. If set to true, A tenant level administrator will be required to grant the implicit grant workflow for the Azure AD App Registration manually.
+USE_EXISTING_ACR | Yes if IS_CONTAINERIZED_DEPLOYMENT, else No |  If using an existing ACR, set USE_EXISTING_ACR to true and fill in the following values. This requires the ACR to exist in the same subscription as this deployment.
+ACR_NAME | Yes if USE_EXISTING_ACR, else No | Name of shared ACR
+ACR_RESOURCE_GROUP | Yes if USE_EXISTING_ACR, else No | ACR resource group
+
 
 ## Log into Azure using the Azure CLI
 
@@ -121,18 +128,26 @@ For a full set of Makefile rules, run `make help`.
 
 ``` bash
 vscode ➜ /workspaces/<accelerator> (main ✗) $ make help
-help                         Show this help
-deploy                       Deploy infrastructure and application code
-build                        Build application code
-infrastructure               Deploy infrastructure
-extract-env                  Extract infrastructure.env file from BICEP output
-deploy-webapp                Deploys the web app code to Azure App Service
-deploy-functions             Deploys the function code to Azure Function Host
-deploy-enrichments           Deploys the web app code to Azure App Service
-deploy-search-indexes        Deploy search indexes
-extract-env-debug-webapp     Extract infrastructure.debug.env file from BICEP output
-extract-env-debug-functions  Extract local.settings.json to debug functions from BICEP output
-functional-tests             Run functional tests to check the processing pipeline is working
+help                           Show this help
+deploy                         Deploy infrastructure and application code
+deploy-containers              Add Docker build/push steps
+build-deploy-webapp            Build and Deploy the Webapp
+build-deploy-enrichments       Build and Deploy the Enrichment Webapp
+build-deploy-functions         Build and Deploy the Functions
+build                          Build application code
+build-containers               Build application Docker containers
+infrastructure                 Deploy infrastructure
+extract-env                    Extract infrastructure.env file from BICEP output
+deploy-webapp                  Deploys the web app code to Azure App Service
+deploy-functions               Deploys the function code to Azure Function Host
+deploy-enrichments             Deploys the web app code to Azure App Service
+deploy-search-indexes          Deploy search indexes
+extract-env-debug-webapp       Extract infrastructure.debug.env file from BICEP output
+extract-env-debug-functions    Extract local.settings.json to debug functions from BICEP output
+check-subscription             Check Azure subscription
+take-dir-ownership             Take directory ownership (CI/CD)
+destroy-inf                    Destroy infrastructure
+functional-tests               Run functional tests to check the processing pipeline is working
 ```
 
 ## Configure authentication and authorization

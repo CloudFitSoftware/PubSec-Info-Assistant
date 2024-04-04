@@ -40,7 +40,6 @@ param applicationInsightsName string = ''
 param backendServiceName string = ''
 param enrichmentServiceName string = ''
 param functionsAppName string = ''
-param mediaServiceName string = ''
 param searchServicesName string = ''
 param searchServicesSkuName string = 'standard'
 param storageAccountName string = ''
@@ -70,6 +69,9 @@ param isGovCloudDeployment bool = contains(location, 'usgov')
 param isContainerizedDeployment bool
 
 // ACR Settings
+param useExistingAcr bool = false
+param existingAcrName string = ''
+param existingAcrResourceGroup string = ''
 param acrSku string = 'Basic'
 
 // Container Settings
@@ -86,7 +88,8 @@ param aksSku object = {
   name: 'Base'
   tier: 'Standard'
 }
-param aksVmSize string = 'Standard_D8ds_v5'
+param aksSystemVmSize string = 'Standard_D16ds_v5'
+param aksUserVmSize string = 'Standard_NC6s_v3'
 
 // PublicIP Settings
 param publicIpSku string = 'Standard'
@@ -138,6 +141,10 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   name: !empty(resourceGroupName) ? resourceGroupName : '${prefix}-${environmentName}'
   location: location
   tags: tags
+}
+
+resource existingAcrRg 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if(useExistingAcr) {
+  name: existingAcrResourceGroup
 }
 
 module logging 'core/logging/logging.bicep' = {
@@ -519,7 +526,8 @@ module aksModule 'core/compute/aks.bicep' = if (isContainerizedDeployment)  {
   params: {
     aksIdentityType: aksIdentityType
     aksSku: aksSku
-    aksVmSize: aksVmSize
+    aksSystemVmSize: aksSystemVmSize
+    aksUserVmSize: aksUserVmSize
     clusterName: '${prefix}-${abbrs.containerServiceManagedClusters}${randomString}'
     keyVaultName: kvModule.outputs.keyVaultName
     location: location
@@ -534,8 +542,10 @@ module acrModule 'core/storage/container-registry.bicep' = if (isContainerizedDe
   params: {
     acrSku: acrSku
     clusterName: '${prefix}${abbrs.containerRegistryRegistries}${randomString}'
+    existingAcrName: existingAcrName
     isGovCloudDeployment: isGovCloudDeployment
     location: location
+    useExistingAcr: useExistingAcr
   }
 }
 
@@ -673,18 +683,6 @@ module containerFunctions 'core/function/contfunctions.bicep' = if (isContaineri
   ]
 }
 
-// Media Service
-module media_service 'core/video_indexer/media_service.bicep' = {
-  name: 'media_service'
-  scope: rg
-  params: {
-    name: !empty(mediaServiceName) ? mediaServiceName : '${prefix}${abbrs.mediaService}${randomString}'
-    location: location
-    tags: tags
-    storageAccountID: storageMedia.outputs.id
-  }
-}
-
 // USER ROLES
 module openAiRoleUser 'core/security/role.bicep' = {
   scope: rg
@@ -748,7 +746,7 @@ module openAiRoleBackend 'core/security/role.bicep' = if (!isContainerizedDeploy
 }
 
 module ACRRoleContainerFunctionAppService 'core/security/role.bicep' = if (isContainerizedDeployment) {
-  scope: rg
+  scope: resourceGroup(useExistingAcr ? existingAcrRg.name : rg.name)
   name: 'container-function-acrpull-role'
   params: {
     principalId: isContainerizedDeployment ? containerFunctions.outputs.identityPrincipalId : ''
@@ -758,7 +756,7 @@ module ACRRoleContainerFunctionAppService 'core/security/role.bicep' = if (isCon
 }
 
 module ACRRoleAzureKubernetesService 'core/security/role.bicep' = if (isContainerizedDeployment) {
-  scope: rg
+  scope: resourceGroup(useExistingAcr ? existingAcrRg.name : rg.name)
   name: 'aks-identity-acrpull-role'
   params: {
     principalId: isContainerizedDeployment ? aksModule.outputs.kubeletPrincipalId : ''
@@ -819,10 +817,10 @@ module containerRegistryPush 'core/security/role.bicep' = if (isContainerizedDep
 
 // MANAGEMENT SERVICE PRINCIPAL
 module openAiRoleMgmt 'core/security/role.bicep' = if (!isInAutomation) {
-  scope: resourceGroup(useExistingAOAIService && !isGovCloudDeployment ? azureOpenAIResourceGroup : rg.name)
+  scope: resourceGroup(useExistingAOAIService ? azureOpenAIResourceGroup : rg.name)
   name: 'openai-role-mgmt'
   params: {
-    principalId: aadMgmtServicePrincipalId
+    principalId: isContainerizedDeployment ? (isContainerizedDeployment ? aksModule.outputs.kubeletPrincipalId : '') : backend.outputs.identityPrincipalId 
     roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
     principalType: 'ServicePrincipal'
   }

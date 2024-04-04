@@ -13,6 +13,7 @@ BINARIES_OUTPUT_PATH="${DIR}/../artifacts/build/"
 WEBAPP_ROOT_PATH="${DIR}/..//app/frontend"
 FUNCTIONS_ROOT_PATH="${DIR}/../functions"
 ENRICHMENT_ROOT_PATH="${DIR}/..//app/enrichment"
+LLM_ROOT_PATH="${DIR}/../app/llm"
 
 # reset the current directory on exit using a trap so that the directory is reset even on error
 #function finish {
