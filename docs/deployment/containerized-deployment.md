@@ -21,6 +21,12 @@
   - [Supporting Pipelines for Deployment](#supporting-pipelines-for-deployment)
   - [Reduce manual steps with automation](#reduce-manual-steps-with-automation)
   - [Fine-tuning LLMs and grounding prompts](#fine-tuning-llms-and-grounding-prompts)
+- [Container Sources / BOM](#container-sources--bom)
+  - [WebApp/Enrichment/Function Apps](#webappenrichmentfunction-apps)
+  - [Weaviate](#weaviate)
+  - [Reranker-Transformers](#reranker-transformers)
+  - [t2v-Transformers](#t2v-transformers)
+  - [LLM Server](#llm-server)
 - [Basic Architecture](#basic-architecture)
 
 ## Install additional build requirements
@@ -189,10 +195,60 @@ helm install infoasst-<pod_name> ./infoasst-<pod_name> --namespace infoasst --cr
 
 Here are the main components of the current prompt:
 1. Targeted Information Retrieval: The prompt requires the model to sift through a structured context block, akin to a database or a collection of documents, to find the section most relevant to the question.
-2. Selective Information Extraction: Once the relevant section is identified, the model must extract and present the specific information needed to answer the question. 
-3. Contextual Interpretation without External Input: The model is tasked with understanding and interpreting the provided context to find the answer, without relying on external knowledge or databases.
-4. Citation and Accountability: By citing the specific section from which the answer was drawn, the prompt incorporates an element of source attribution, which adds a layer of accountability and transparency to the model's responses.
+1. Selective Information Extraction: Once the relevant section is identified, the model must extract and present the specific information needed to answer the question. 
+1. Contextual Interpretation without External Input: The model is tasked with understanding and interpreting the provided context to find the answer, without relying on external knowledge or databases.
+1. Citation and Accountability: By citing the specific section from which the answer was drawn, the prompt incorporates an element of source attribution, which adds a layer of accountability and transparency to the model's responses.
+
+### Pod availability
+
+Need to consider HA and redundancy, the ability to upgrade containers without outages, etc.
+
+## Container Sources
+
+### WebApp/Enrichment/Function Apps
+
+The following containers are built from source code:
+
+- Webapp: The source is a combination from `./app/backend/*` and `./app/frontend/*`
+- Enrichment: The source is from `./app/enrichment/*`
+- Function Apps: The source is from `./functions/*`
+
+The build process for these containers currently follows this process:
+
+- During `make build-containers` or `make deploy-containers`, the `./scripts/build.sh` is executed and compresses the above sources into `./artifacts/`
+- We then run `./scripts/build-containers.sh` which extracts those artifacts into `./docker/` so that we can build via `docker build...`
+
+### Weaviate
+
+The Weaviate container is sourced from ChainGuard `cgr.dev/chainguard/weaviate:latest`.  Weaviate has dependencies on the Reranker and T2V containers
+
+### Reranker-Transformers
+
+The Reranker-Transformers container is sourced from hub.docker.com via `semitechnologies/reranker-transformers:cross-encoder-ms-marco-MiniLM-L-6-v2`
+
+### t2v-Transformers
+
+The T2v-Transformers container is sourced from hub.docker.com via `semitechnologies/transformers-inference:sentence-transformers-multi-qa-MiniLM-L6-cos-v1`
+
+### LLM Server
+
+THe LLM server references source code at `./llm/` and currently references base Python images from ChainGuard. `cgr.dev/chainguard/python:latest-dev` and `cgr.dev/chainguard/python:latest`
+
+The `latest-dev` tag allows us to run processes to install prerequisites prior to using the more secure tag `latest`.
+
+For the OSS language model, we are currently using [Mistral-7b-instruct-v2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) from Huggingface.co.  This model is saved to a storage account which is mounted as a file share volume within the container when deployed. 
 
 ## Basic Architecture
+
+### AKS Node Pools
+
+We currently use two nodepools for the entire containerized solution
+
+* Default agent pool (System)
+* One additional User pool
+
+The default agent pool runs supporting pods for Kubernetes as well as all of our containers, except for the LLM.  The LLM is on its dedicated user pool due to the fact that we need to use a different SKU to enable GPU acceleration for the best performace when generating responses.
+
+The overall architecture and how the solution works is not much different than what is described [here](/README.md#features) with the primary difference being that the Function App and Azure Web Apps (Webapp and Enrichment services) are now running within an AKS cluster rather than being their own standalone Azure resource.  Azure Search has been replaced with Weaviate and its supporting containers (Reranker, T2V).  Open AI, if utilized for disconnected states, is replaced with our LLM model that uses `Mistral-7b-instruct-v2`
 
 ![alt text](/docs/images/container-arch.png)
