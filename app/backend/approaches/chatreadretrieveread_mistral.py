@@ -60,7 +60,6 @@ class ChatReadRetrieveReadApproachMistral(Approach):
         query_term_language: str,
         model_name: str,
         model_version: str,
-        is_gov_cloud_deployment: str,
         IS_CONTAINERIZED_DEPLOYMENT: str,
         TARGET_EMBEDDING_MODEL: str,
     ):
@@ -82,7 +81,6 @@ class ChatReadRetrieveReadApproachMistral(Approach):
 
         self.model_name = model_name
         self.model_version = model_version
-        self.is_gov_cloud_deployment = is_gov_cloud_deployment
         self.IS_CONTAINERIZED_DEPLOYMENT = IS_CONTAINERIZED_DEPLOYMENT
 
     def remove_html_tags(self, text):
@@ -116,6 +114,7 @@ class ChatReadRetrieveReadApproachMistral(Approach):
             title = result['title']
             source = result['source']
             score = result['_additional']['score']
+            chunk_file = result['chunk_file']
             rerank_score = result['_additional']['rerank'][0]['score']
             if float(score) > cutoff_score:
                 results.append(
@@ -128,7 +127,7 @@ class ChatReadRetrieveReadApproachMistral(Approach):
                     )
 
                 citation_lookup[f"File{counter}"] = {
-                    "citation": urllib.parse.unquote("https://" + source.split("/")[2] + f"/{self.content_storage_container}/" + source.split("/")[4] + "/" + source.split("/")[4].split(".")[0] + "-" + str(counter) + ".json"),
+                    "citation": urllib.parse.unquote("https://" + source.split("/")[2] + f"/{self.content_storage_container}/" + source.split("/")[4] + "/" + chunk_file.split('/')[1]),
                     "source_path": self.get_source_file_with_sas(source),
                     "page_number": "0",
                 }         
@@ -197,7 +196,9 @@ class ChatReadRetrieveReadApproachMistral(Approach):
             "data_points": data_points,
             "answer": f"{urllib.parse.unquote(generated_query)}",
             "thoughts": f"Searched for:<br>{last_question}<br><br>Conversations:<br>" + chain_of_thought.replace('\n', '<br>'),
-            "citation_lookup": citation_lookup
+            "thought_chain": "",
+            "work_citation_lookup": citation_lookup,
+            "web_citation_lookup": ""
         }
 
     #Aparmar. Custom method to construct Chat History as opposed to single string of chat History.

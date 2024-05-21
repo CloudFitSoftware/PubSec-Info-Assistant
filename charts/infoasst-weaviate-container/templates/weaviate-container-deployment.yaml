@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infoasst-weaviate
+  namespace: infoasst
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: infoasst-weaviate
+  template:
+    metadata:
+      labels:
+        app: infoasst-weaviate
+    spec:
+      containers:
+      - name: infoasst-weaviate
+        image: {{ .Values.images.weaviate.repository }}:{{ .Values.images.weaviate.label }}
+        env:
+          - name: AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED
+            value: "{{ .Values.weaviate.env.authenticationanonymousaccessenabled }}"
+          - name: PERSISTENCE_DATA_PATH
+            value: "{{ .Values.weaviate.env.persistencedatapath }}"
+          - name: TRANSFORMERS_INFERENCE_API
+            value: "{{ .Values.weaviate.env.transformersinferenceapi }}"
+          - name: RERANKER_INFERENCE_API
+            value: "{{ .Values.weaviate.env.rerankerinferenceapi }}"
+        resources:
+          limits:
+            memory: "6G"
+            cpu: "500m"
+        ports:
+          - containerPort: 8080
+          - containerPort: 50051
+        volumeMounts:
+          - name: infoasst-weaviate
+            mountPath: "/var/lib/weaviate"
+      securityContext: 
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      volumes: 
+        - name: infoasst-weaviate
+          persistentVolumeClaim: 
+            claimName: infoasst-weaviate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infoasst-weaviate
+  namespace: infoasst
+spec:
+  type: ClusterIP
+  ports:
+  - name: "8080"
+    port: 8080
+    targetPort: 8080
+  - name: "50051"
+    port: 50051
+    targetPort: 50051
+  selector:
+    app: infoasst-weaviate
+

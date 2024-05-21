@@ -9,11 +9,11 @@ webapp:
     azureblobstoragecontainer: content
     azureblobstorageendpoint: ${BLOB_STORAGE_ACCOUNT_ENDPOINT}
     azureblobstorageuploadcontainer: upload
-    azurekeyvaultendpoint:
-    azurekeyvaultname: ${DEPLOYMENT_KEYVAULT_NAME}
-    azureopenaichatgptdeployment: ${AZURE_OPENAI_CHATGPT_DEPLOYMENT}
-    azureopenaichatgptmodelname: ${AZURE_OPENAI_CHATGPT_MODEL_NAME}
-    azureopenatchatgptmodelversion: ${AZURE_OPENAI_CHATGPT_MODEL_VERSION}
+    azurekeyvaultendpoint: ${DEPLOYMENT_KEYVAULT_ENDPOINT}
+    azurekeyvaultname: ${DEPLOYMENT_KEYVAULT_ENDPOINT}
+    azureopenaichatgptdeployment: ${AZURE_OPENAI_CHAT_GPT_DEPLOYMENT}
+    azureopenaichatgptmodelname: ${AZURE_OPENAI_CHAT_GPT_MODEL_NAME}
+    azureopenaichatgptmodelversion: ${AZURE_OPENAI_CHAT_GPT_MODEL_VERSION}
     azureopenaiembeddingsmodelname: ${AZURE_OPENAI_EMBEDDINGS_MODEL_NAME}
     azureopenaiembeddingsmodelversion: ${AZURE_OPENAI_EMBEDDINGS_MODEL_VERSION}
     azureopenairesourcegroup: ${AZURE_OPENAI_RESOURCE_GROUP}
@@ -21,20 +21,16 @@ webapp:
     azuresearchindex: vector-index
     azuresearchservice: ${AZURE_SEARCH_SERVICE}
     azuresearchserviceendpoint: ${AZURE_SEARCH_SERVICE_ENDPOINT}
-    azuresubscriptionid: ${SUBSCRIPTION_ID}
-    azuretenantid: ${TENANT_ID}
+    azuresubscriptionid: ${AZURE_SUBSCRIPTION_ID}
+    azuretenantid: ${AZURE_TENANT_ID}
     chatwarningbannertext: ${CHAT_WARNING_BANNER_TEXT}
-    cosmosdblogcontainername: ${COSMOSDB_LOG_CONTAINER_NAME}
-    cosmosdblogdatabasename: ${COSMOSDB_LOG_DATABASE_NAME}
-    cosmosdbtagscontainername: ${COSMOSDB_TAGS_CONTAINER_NAME}
-    cosmosdbtagsdatabasename: ${COSMOSDB_TAGS_DATABASE_NAME}
-    cosmosdburl: ${COSMOSDB_URL}
+    cosmosdblogcontainername: ${AZURE_COSMOSDB_LOG_CONTAINER_NAME}
+    cosmosdblogdatabasename: ${AZURE_COSMOSDB_LOG_DATABASE_NAME}
+    cosmosdburl: ${AZURE_COSMOSDB_URL}
     embeddingdeploymentname: ${AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME}
     enableoryxbuild: true
     enrichmentappservicename: ${ENRICHMENT_APPSERVICE_NAME}
     isContainerizedDeployment: ${IS_CONTAINERIZED_DEPLOYMENT}
-    isgovclouddeployment: ${IS_USGOV_DEPLOYMENT}
-    querytermlanguage: ${PROMPT_QUERYTERM_LANGUAGE}
     scmdobuildduringdeployment: true
     targetembeddingsmodel: ${TARGET_EMBEDDINGS_MODEL}
     useazureopenaiembeddings: ${USE_AZURE_OPENAI_EMBEDDINGS}

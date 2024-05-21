@@ -45,27 +45,32 @@ steps:
     displayName: 'Run make build'
     makeCommand: 'build'
 
-- bash: |
-    set -e
-    cd $(Build.SourcesDirectory)
-    docker build . \
-      -f '$(Build.SourcesDirectory)/Dockerfile' \
-      -t 'info-asst-bootstrapper:latest' \
-      -t 'info-asst-bootstrapper:$(Build.BuildId)'
-  displayName: Create Bootstrapper Container
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: '$(Build.SourcesDirectory)/artifacts/build'
+    artifactName: drop_artifacts
 
-- bash: |
-    set -e
-    docker image tag info-asst-bootstrapper:latest $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:latest
-    docker image tag info-asst-bootstrapper:latest $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:$(Build.BuildId)
-    docker image push $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:latest
-    docker image push $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:$(Build.BuildId)
-  displayName: ⬆️ Push Bootstrapper Image to Container Registry
-  condition: succeeded()
+# - template: build-container.yml
+#   parameters:
+#     displayName: 'Build and Push Webapp'
+#     containerName: 'webapp'
+#     unzipBinaries: true
 
-# - task: PublishBuildArtifacts@1
-#   displayName: "⬆️ Publish All Artifacts"
-#   inputs:
-#     PathtoPublish: '$(Build.SourcesDirectory)/artifacts'
-#     ArtifactName: 'drop_BuildIBContainer'
-#     publishLocation: 'Container'
+
+# - bash: |
+#     set -e
+#     cd $(Build.SourcesDirectory)
+#     docker build . \
+#       -f '$(Build.SourcesDirectory)/Dockerfile' \
+#       -t 'info-asst-bootstrapper:latest' \
+#       -t 'info-asst-bootstrapper:$(Build.BuildId)'
+#   displayName: Create Bootstrapper Container
+
+# - bash: |
+#     set -e
+#     docker image tag info-asst-bootstrapper:latest $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:latest
+#     docker image tag info-asst-bootstrapper:latest $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:$(Build.BuildId)
+#     docker image push $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:latest
+#     docker image push $(CONTAINER_REGISTRY_ADDRESS)/info-asst-bootstrapper:$(Build.BuildId)
+#   displayName: ⬆️ Push Bootstrapper Image to Container Registry
+#   condition: succeeded()

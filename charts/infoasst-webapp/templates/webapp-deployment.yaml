@@ -28,7 +28,7 @@ spec:
           - name: AZURE_KEY_VAULT_ENDPOINT
             value: "{{ .Values.webapp.env.azurekeyvaultendpoint }}"
           - name: AZURE_KEYVAULT_NAME
-            value: "{{ .Values.webapp.env.azurekeyvaultname }}"
+            value: "{{ .Values.webapp.env.azurekeyvaultendpoint }}"
           - name: AZURE_OPENAI_CHATGPT_DEPLOYMENT
             value: "{{ .Values.webapp.env.azureopenaichatgptdeployment }}"
           - name: AZURE_OPENAI_CHATGPT_MODEL_NAME
@@ -59,10 +59,6 @@ spec:
             value: "{{ .Values.webapp.env.cosmosdblogcontainername }}"
           - name: COSMOSDB_LOG_DATABASE_NAME
             value: "{{ .Values.webapp.env.cosmosdblogdatabasename }}"
-          - name: COSMOSDB_TAGS_CONTAINER_NAME
-            value: "{{ .Values.webapp.env.cosmosdbtagscontainername }}"
-          - name: COSMOSDB_TAGS_DATABASE_NAME
-            value: "{{ .Values.webapp.env.cosmosdbtagsdatabasename }}"
           - name: COSMOSDB_URL
             value: "{{ .Values.webapp.env.cosmosdburl }}"
           - name: EMBEDDING_DEPLOYMENT_NAME
@@ -73,8 +69,6 @@ spec:
             value: "{{ .Values.webapp.env.enrichmentappservicename }}"
           - name: IS_CONTAINERIZED_DEPLOYMENT
             value: "{{ .Values.webapp.env.isContainerizedDeployment }}"
-          - name: IS_GOV_CLOUD_DEPLOYMENT
-            value: "{{ .Values.webapp.env.isgovclouddeployment }}"
           - name: QUERY_TERM_LANGUAGE
             value: "{{ .Values.webapp.env.querytermlanguage }}"
           - name: SCM_DO_BUILD_DURING_DEPLOYMENT
@@ -92,7 +86,7 @@ spec:
             memory: "4G"
             cpu: "250m"
         ports:
-          - containerPort: 80
+          - containerPort: 5050
 ---
 apiVersion: v1
 kind: Service
@@ -102,9 +96,9 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - name: "80"
+  - name: "5050"
     port: 80
-    targetPort: 80
+    targetPort: 5050
   selector:
     app: infoasst-webapp
 
