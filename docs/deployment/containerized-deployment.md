@@ -169,9 +169,11 @@ docker push each image for `webapp`, `function`, `weaviate`, `t2v`, `reranker`, 
 docker push <acrname>.azurecr.us/<container_name>:latest
 ```
 
-### Install kubernetes pods using helm
+### Install kubernetes pods and weaviate PVC using helm
+Please note that the weaviate PVC has its own seperate helm chart, weaviate-storage-deployment.yaml. You should only need to install this PVC once. 
+**Deleting it will cause you to lose your weaviate index.**
 
-helm install each chart for `webapp`, `function`, `weaviate`, `t2v`, `reranker`, `llm`, and `enrichment`
+helm install each chart for `webapp`, `function`, `weaviate-container`, `weaviate-storage`, `t2v`, `reranker`, `llm`, and `enrichment`
 
 ```powershell
 helm install infoasst-<pod_name> ./infoasst-<pod_name> --namespace infoasst --create-namespace

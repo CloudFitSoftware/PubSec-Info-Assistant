@@ -1,0 +1,49 @@
+parameters:
+  containers: []
+  dockerDir: ''
+  downloadArtifacts: false
+
+jobs:
+- ${{ each container in parameters.containers }}:
+  - job: Build_And_Push_${{ replace(container, '-', '_') }}
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - bash: |
+        docker login $(CONTAINER_REGISTRY_ADDRESS) -u $(CLIENT_ID) -p $(CLIENT_SECRET)
+      displayName: Docker Login
+    - ${{ if eq(parameters.downloadArtifacts, true) }}:
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          buildType: 'current'
+          itemPattern: '**/${{ container }}.zip'
+          targetPath: '$(Build.SourcesDirectory)'
+    - ${{ if eq(parameters.downloadArtifacts, true) }}:
+      - bash: |
+          cp /$(Build.SourcesDirectory)/drop_artifacts/${{ container }}.zip ${{ parameters.dockerDir }}
+          cd ${{ parameters.dockerDir }}
+          unzip -d ${{ container }}/ ${{ container }}.zip
+        displayName: Copy Downloaded artifacts to Docker Directory
+    - bash: |
+        cd ${{ parameters.dockerDir }}
+        docker build -t $(CONTAINER_REGISTRY_ADDRESS)/${{ container }}:$(Build.BuildNumber) -f Dockerfile.${{ container }} .
+      displayName: Build ${{ container }} Container
+    - bash: |
+        docker push $(CONTAINER_REGISTRY_ADDRESS)/${{ container }}:$(Build.BuildNumber)
+      displayName: ⬆️ Push ${{ container }} Container
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    - bash: |
+        docker image rm $(CONTAINER_REGISTRY_ADDRESS)/${{ container }}:$(Build.BuildNumber) --force
+      displayName: Delete Local ${{ container }} Container
+      condition: succeeded()
+    - bash: |
+        docker logout
+      displayName: Docker Logout
+      condition: always()
+    - ${{ if eq(parameters.downloadArtifacts, true) }}:
+      - bash: |
+          cd ${{ parameters.dockerDir }}
+          rm -rf ./${{ container }} /
+          rm ./${{ container }}.zip
+        displayName: 🧹 Clean Up Files
+        condition: always()

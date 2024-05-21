@@ -15,8 +15,7 @@
 
 # Models
 
-models/*
-!models/*.md
+models
 
 # Image tags
 
@@ -370,6 +369,7 @@ main.parameters.json
 infrastructure.env
 infrastructure.debug.env
 infra_output.json
+inf_output.json
 random.txt
 .state
 values.yaml
@@ -389,5 +389,11 @@ packages-microsoft*
 # docker container build artifacts
 app/enrichment/shared_code
 
-# llm model files
-*.gguf
+#terraform
+.terraform
+infra/.terraform*
+terraform.tfstate
+terraform.tfstate.d
+.tfplan.txt
+infra/infoasst*
+infra/sp_config/config.json

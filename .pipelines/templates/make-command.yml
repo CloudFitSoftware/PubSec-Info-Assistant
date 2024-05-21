@@ -17,6 +17,7 @@ steps:
 - bash: |
     set -e
     chmod +x $(Build.SourcesDirectory)/scripts/*.sh
+  displayName: Set executable rights on all scripts
 - bash: |
     set -e
     docker run --rm \

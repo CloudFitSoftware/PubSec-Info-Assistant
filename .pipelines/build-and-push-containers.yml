@@ -1,0 +1,51 @@
+trigger: 
+  branches:
+    include:
+    - main
+  paths:
+    exclude:
+    - docs/*
+    - "*.md"
+
+stages:
+- stage: Build_Binaries
+  dependsOn: []
+  displayName: Build and Publish Binaries
+  pool:
+    vmImage: 'ubuntu-latest'
+  jobs:
+  - job:
+    steps:
+    - template: templates/build-template.yml
+- stage: Build_And_Push_Compiled_Containers
+  dependsOn: [Build_Binaries]
+  displayName: 🚀 Build and Push Compiled Containers
+  jobs:
+  - template: templates/build-container.yml
+    parameters:
+      dockerDir: /$(Build.SourcesDirectory)/docker
+      downloadArtifacts: true
+      containers:
+      - webapp
+      - enrichment
+      - functions
+- stage: Build_And_Push_Misc_Containers
+  dependsOn: []
+  displayName: 🚀 Build and Push Weaviate Containers
+  jobs:
+  - template: templates/build-container.yml
+    parameters:
+      dockerDir: /$(Build.SourcesDirectory)/docker
+      containers:
+      - weaviate
+      - reranker-transformers
+      - t2v-transformers
+- stage: Build_And_Push_LLM_Container
+  dependsOn: []
+  displayName: 🚀 Build and Push LLM Container
+  jobs:
+  - template: templates/build-container.yml
+    parameters:
+      dockerDir: /$(Build.SourcesDirectory)/llm
+      containers:
+      - llm

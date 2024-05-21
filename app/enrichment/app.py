@@ -14,7 +14,7 @@ import requests
 import random
 from urllib.parse import unquote
 from azure.keyvault.secrets import SecretClient
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, AzureAuthorityHosts
 from azure.storage.blob import BlobServiceClient
 from azure.storage.queue import QueueClient, TextBase64EncodePolicy
 from azure.search.documents import SearchClient
@@ -30,7 +30,8 @@ from tenacity import retry, wait_random_exponential, stop_after_attempt
 from sentence_transformers import SentenceTransformer
 from shared_code.utilities_helper import UtilitiesHelper
 from shared_code.status_log import State, StatusClassification, StatusLog
-from shared_code.tags_helper import TagsHelper
+from azure.storage.blob import BlobServiceClient
+from urllib.parse import unquote
 from langchain.docstore.document import Document
 from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
 import weaviate
@@ -50,12 +51,11 @@ ENV = {
     "COSMOSDB_KEY": None,
     "COSMOSDB_LOG_DATABASE_NAME": None,
     "COSMOSDB_LOG_CONTAINER_NAME": None,
-    "COSMOSDB_TAGS_DATABASE_NAME": None,
-    "COSMOSDB_TAGS_CONTAINER_NAME": None,
     "MAX_EMBEDDING_REQUEUE_COUNT": 5,
     "EMBEDDING_REQUEUE_BACKOFF": 60,
     "AZURE_OPENAI_SERVICE": None,
     "AZURE_OPENAI_SERVICE_KEY": None,
+    "AZURE_OPENAI_ENDPOINT": None,
     "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME": None,
     "AZURE_SEARCH_INDEX": None,
     "AZURE_SEARCH_SERVICE_KEY": None,
@@ -77,41 +77,41 @@ for key, value in ENV.items():
 
 str_to_bool = {'true': True, 'false': False}
 
-IS_GOV_CLOUD_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_GOV_CLOUD_DEPLOYMENT", "").lower()) or False
-
 IS_CONTAINERIZED_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_CONTAINERIZED_DEPLOYMENT", "").lower()) or False
-
 WEAVIATE_URL = os.environ.get("WEAVIATE_URL", "") 
-
 WEAVIATE_INDEX_NAME = os.environ.get("WEAVIATE_INDEX", "WEAVIATE")
 
 AZURE_KEY_VAULT_NAME = os.environ.get("AZURE_KEY_VAULT_NAME") or ""
-azure_credential = DefaultAzureCredential()
+AZURE_OPENAI_AUTHORITY_HOST = os.environ.get("AZURE_OPENAI_AUTHORITY_HOST") or "AzureCloud"
 
-kv_uri = ''
-if (IS_GOV_CLOUD_DEPLOYMENT):
-    kv_uri = f"https://{AZURE_KEY_VAULT_NAME}.vault.usgovcloudapi.net"
+kv_uri = AZURE_KEY_VAULT_NAME
+
+if AZURE_OPENAI_AUTHORITY_HOST == "AzureUSGovernment":
+    AUTHORITY = AzureAuthorityHosts.AZURE_GOVERNMENT
 else:
-    kv_uri = f"https://{AZURE_KEY_VAULT_NAME}.vault.azure.net"
+    AUTHORITY = AzureAuthorityHosts.AZURE_PUBLIC_CLOUD
+
+azure_credential = DefaultAzureCredential(authority=AUTHORITY)
 
 keyVaultClient = SecretClient(vault_url=kv_uri, credential=azure_credential)
 
+if IS_CONTAINERIZED_DEPLOYMENT:
+    AZURE_OPENAI_SERVICE_KEY = AZURE_SEARCH_SERVICE_KEY = ""
+else:
+    AZURE_OPENAI_SERVICE_KEY = keyVaultClient.get_secret("AZURE-OPENAI-SERVICE-KEY").value
+    AZURE_SEARCH_SERVICE_KEY = keyVaultClient.get_secret("AZURE-SEARCH-SERVICE-KEY").value #figure out how to handle if IS_CONTAINERIZED_DEPLOYMENT
+    
 AZURE_BLOB_STORAGE_KEY = keyVaultClient.get_secret("AZURE-BLOB-STORAGE-KEY").value
-AZURE_OPENAI_SERVICE_KEY = keyVaultClient.get_secret("AZURE-OPENAI-SERVICE-KEY").value
-AZURE_SEARCH_SERVICE_KEY = keyVaultClient.get_secret("AZURE-SEARCH-SERVICE-KEY").value #figure out how to handle if IS_CONTAINERIZED_DEPLOYMENT
 BLOB_CONNECTION_STRING = keyVaultClient.get_secret("BLOB-CONNECTION-STRING").value
+AZURE_STORAGE_CONNECTION_STRING = keyVaultClient.get_secret("BLOB-CONNECTION-STRING").value
 COSMOSDB_KEY = keyVaultClient.get_secret("COSMOSDB-KEY").value
 
 search_creds = AzureKeyCredential(AZURE_SEARCH_SERVICE_KEY) #figure out how to handle if IS_CONTAINERIZED_DEPLOYMENT
 
-# The following line will need to be updated to point to different endpoints
-if (IS_GOV_CLOUD_DEPLOYMENT):
-    openai.api_base = "https://" + ENV["AZURE_OPENAI_SERVICE"] + ".openai.azure.us"
-else: 
-    openai.api_base = "https://" + ENV["AZURE_OPENAI_SERVICE"] + ".openai.azure.com"
+openai.api_base = ENV["AZURE_OPENAI_ENDPOINT"]
 openai.api_type = "azure"
 openai.api_key = AZURE_OPENAI_SERVICE_KEY
-openai.api_version = "2023-06-01-preview"
+openai.api_version = "2023-12-01-preview"
 
 class AzOAIEmbedding(object):
     """A wrapper for a Azure OpenAI Embedding model"""
@@ -155,7 +155,6 @@ utilities_helper = UtilitiesHelper(
 
 statusLog = StatusLog(ENV["COSMOSDB_URL"], COSMOSDB_KEY, ENV["COSMOSDB_LOG_DATABASE_NAME"], ENV["COSMOSDB_LOG_CONTAINER_NAME"])
 
-tagsHelper = TagsHelper(ENV["COSMOSDB_URL"], COSMOSDB_KEY, ENV["COSMOSDB_TAGS_DATABASE_NAME"], ENV["COSMOSDB_TAGS_CONTAINER_NAME"])
 # === API Setup ===
 
 start_time = datetime.now()
@@ -339,7 +338,8 @@ class WeaviateSearch:
         chunks = [Document(page_content=chunk["content"], 
                 metadata={"title": chunk['title'], #translated title?
                         "source": chunk['file_uri'],
-                        "language":  "en-US" }) #defaulting, can we pull from somewhere?
+                        "language":  "en-US",
+                        "chunk_file": chunk['chunk_file']})
                 for chunk in chunks]
         
         # add documents to weaviate
@@ -356,31 +356,15 @@ def index_sections(chunks):
     """
     if IS_CONTAINERIZED_DEPLOYMENT:
         search_client = WeaviateSearch(url=WEAVIATE_URL, index_name=WEAVIATE_INDEX_NAME)
+        search_client.index_documents(chunks)
     else:
-        search_client = AzureSearch(endpoint=ENV["AZURE_SEARCH_SERVICE_ENDPOINT"],
+        search_client = SearchClient(endpoint=ENV["AZURE_SEARCH_SERVICE_ENDPOINT"],
                                     index_name=ENV["AZURE_SEARCH_INDEX"],
                                     credential=search_creds)
-    search_client.index_documents(chunks)
-
-def get_tags_and_upload_to_cosmos(blob_service_client, blob_path):
-    """ Gets the tags from the blob metadata and uploads them to cosmos db"""
-    file_name, file_extension, file_directory = utilities_helper.get_filename_and_extension(blob_path)
-    path = file_directory + file_name + file_extension
-    blob_client = blob_service_client.get_blob_client(
-        container=ENV["AZURE_BLOB_STORAGE_UPLOAD_CONTAINER"],
-        blob=path)
-    blob_properties = blob_client.get_blob_properties()
-    tags = blob_properties.metadata.get("tags")
-    if tags is not None:
-        if isinstance(tags, str):
-            tags_list = [unquote(tags)]
-        else:
-            tags_list = [unquote(tag) for tag in tags.split(",")]
-    else:
-        tags_list = []
-    # Write the tags to cosmos db
-    tagsHelper.upsert_document(blob_path, tags_list)
-    return tags_list
+        ##TODO: What do we do with Weaviate here??
+        results = search_client.upload_documents(documents=chunks)
+        succeeded = sum([1 for r in results if r.succeeded])
+        log.debug(f"\tIndexed {len(results)} chunks, {succeeded} succeeded")
 
 @app.on_event("startup") 
 def startup_event():
@@ -392,7 +376,34 @@ def poll_queue_thread():
     while True:
         poll_queue()
         time.sleep(5)     
-        
+
+def get_tags(blob_path):
+    """ Retrieves tags from the upload container blob
+    """     
+    # Remove the container prefix
+    path_parts = blob_path.split('/')
+    blob_path = '/'.join(path_parts[1:])
+    
+    blob_service_client = BlobServiceClient.from_connection_string(BLOB_CONNECTION_STRING)
+    # container_client = blob_service_client.get_container_client(ENV["AZURE_BLOB_STORAGE_CONTAINER"])
+    blob_client = blob_service_client.get_blob_client(
+        container=ENV["AZURE_BLOB_STORAGE_UPLOAD_CONTAINER"],
+        blob=blob_path)
+
+    
+    # blob_client = container_client.get_blob_client(
+    # blob_client = container_client.get_blob_client(container_client=container_client, blob=blob_path)
+    blob_properties = blob_client.get_blob_properties()
+    tags = blob_properties.metadata.get("tags")
+    if tags != '' and tags is not None:
+        if isinstance(tags, str):
+            tags_list = [unquote(tag.strip()) for tag in tags.split(",")]
+        else:
+            tags_list = [unquote(tag.strip()) for tag in tags]
+    else:
+        tags_list = []
+    return tags_list
+
 def poll_queue() -> None:
     """Polls the queue for messages and embeds them"""
     
@@ -426,20 +437,23 @@ def poll_queue() -> None:
 
         try:  
             statusLog.upsert_document(blob_path, f'Embeddings process started with model {target_embeddings_model}', StatusClassification.INFO, State.PROCESSING)
-        
             file_name, file_extension, file_directory  = utilities_helper.get_filename_and_extension(blob_path)
             chunk_folder_path = file_directory + file_name + file_extension
             blob_service_client = BlobServiceClient.from_connection_string(BLOB_CONNECTION_STRING)
             container_client = blob_service_client.get_container_client(ENV["AZURE_BLOB_STORAGE_CONTAINER"])
             index_chunks = []
 
+            # get tags to apply to the chunk
+            tag_list = get_tags(blob_path)
+
             # Iterate over the chunks in the container
             chunk_list = container_client.list_blobs(name_starts_with=chunk_folder_path)
             chunks = list(chunk_list)
             i = 0
-            for chunk in chunks:
 
-                statusLog.update_document_state( blob_path, f"Indexing {i+1}/{len(chunks)}")
+            for chunk in chunks:
+                statusLog.update_document_state( blob_path, f"Indexing {i+1}/{len(chunks)}", State.INDEXING)
+                # statusLog.update_document_state( blob_path, f"Indexing {i+1}/{len(chunks)}", State.PROCESSING
                 # open the file and extract the content
                 blob_path_plus_sas = utilities_helper.get_blob_and_sas(
                     ENV["AZURE_BLOB_STORAGE_CONTAINER"] + '/' + chunk.name)
@@ -464,10 +478,17 @@ def poll_queue() -> None:
                     )
 
                 # logic added because weaviate does embedding internally
-                embedding_data = None if IS_CONTAINERIZED_DEPLOYMENT else embed_texts(target_embeddings_model, [text])['data']
+                embedding_data = None 
+                if not IS_CONTAINERIZED_DEPLOYMENT:
+                    try:
+                        # try first to read the embedding from the chunk, in case it was already created
+                        embedding_data = chunk_dict['contentVector']
+                    except KeyError:
+                        # create embedding
+                        embedding = embed_texts(target_embeddings_model, [text])
+                        embedding_data = embedding['data'] 
 
-                tag_list = get_tags_and_upload_to_cosmos(blob_service_client, chunk_dict["file_name"])
-
+                # Prepare the index schema based representation of the chunk with the embedding
                 index_chunk = {}
                 index_chunk['id'] = statusLog.encode_document_id(chunk.name)
                 index_chunk['processed_datetime'] = f"{chunk_dict['processed_datetime']}+00:00"
@@ -485,9 +506,15 @@ def poll_queue() -> None:
                 index_chunk['entities'] = chunk_dict["entities"]
                 index_chunk['key_phrases'] = chunk_dict["key_phrases"]
                 index_chunks.append(index_chunk)
+
+                # write the updated chunk, with embedding to storage in case of failure
+                chunk_dict['contentVector'] = embedding_data
+                json_str = json.dumps(chunk_dict, indent=2, ensure_ascii=False)
+                block_blob_client = blob_service_client.get_blob_client(container=ENV["AZURE_BLOB_STORAGE_CONTAINER"], blob=chunk.name)
+                block_blob_client.upload_blob(json_str, overwrite=True)
                 i += 1
                 
-                # push batch of content to index
+                # push batch of content to index, rather than each individual chunk
                 if i % 200 == 0:
                     index_sections(index_chunks)
                     index_chunks = []
@@ -520,7 +547,7 @@ def poll_queue() -> None:
                 backoff = random.randint(
                     int(ENV["EMBEDDING_REQUEUE_BACKOFF"]) * requeue_count, max_seconds)                
                 queue_client.send_message(message_string, visibility_timeout=backoff)
-                statusLog.upsert_document(blob_path, f'Message requed to embeddings queue, attempt {str(requeue_count)}. Visible in {str(backoff)} seconds. Error: {str(error)}.',
+                statusLog.upsert_document(blob_path, f'Message requeued to embeddings queue, attempt {str(requeue_count)}. Visible in {str(backoff)} seconds. Error: {str(error)}.',
                                           StatusClassification.ERROR,
                                           State.QUEUED)
                 log.debug(f'Message requed to embeddings queue, attempt {str(requeue_count)}. Visible in {str(backoff)} seconds. Error: {str(error)}.')

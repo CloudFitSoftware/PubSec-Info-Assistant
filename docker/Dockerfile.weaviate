@@ -9,7 +9,8 @@ ENV TRANSFORMERS_INFERENCE_API=http://t2v-transformers:8080 \
     PERSISTENCE_DATA_PATH=/var/lib/weaviate \
     DEFAULT_VECTORIZER_MODULE=text2vec-transformers \
     ENABLE_MODULES=text2vec-transformers,reranker-transformers \
-    CLUSTER_HOSTNAME=node1
+    CLUSTER_HOSTNAME=node1 \
+    ASYNC_INDEXING=true
 
 # Expose the ports
 EXPOSE 8080 50051

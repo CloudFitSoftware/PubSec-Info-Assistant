@@ -30,7 +30,7 @@ spec:
           - name: AZURE_KEY_VAULT_ENDPOINT
             value: "{{ .Values.enrichment.env.azurekeyvaultendpoint }}"
           - name: AZURE_KEY_VAULT_NAME
-            value: "{{ .Values.enrichment.env.azurekeyvaultname }}"
+            value: "{{ .Values.enrichment.env.azurekeyvaultendpoint }}"
           - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME
             value: "{{ .Values.enrichment.env.azureopenaiembeddingdeploymentname }}"
           - name: AZURE_OPENAI_SERVICE
@@ -45,10 +45,6 @@ spec:
             value: "{{ .Values.enrichment.env.cosmosdblogcontainername }}"
           - name: COSMOSDB_LOG_DATABASE_NAME
             value: "{{ .Values.enrichment.env.cosmosdblogdatabasename }}"
-          - name: COSMOSDB_TAGS_CONTAINER_NAME
-            value: "{{ .Values.enrichment.env.cosmosdbtagscontainername }}"
-          - name: COSMOSDB_TAGS_DATABASE_NAME
-            value: "{{ .Values.enrichment.env.cosmosdbtagsdatabasename }}"
           - name: COSMOSDB_URL
             value: "{{ .Values.enrichment.env.cosmosdburl }}"
           - name: DEQUEUE_MESSAGE_BATCH_SIZE
@@ -63,8 +59,6 @@ spec:
             value: "{{ .Values.enrichment.env.enableoryxbuild }}"
           - name: IS_CONTAINERIZED_DEPLOYMENT
             value: "{{ .Values.enrichment.env.isContainerizedDeployment }}"
-          - name: IS_GOV_CLOUD_DEPLOYMENT
-            value: "{{ .Values.enrichment.env.isgovclouddeployment }}"
           - name: LOG_LEVEL
             value: "{{ .Values.enrichment.env.loglevel }}"
           - name: MAX_EMBEDDING_REQUEUE_COUNT

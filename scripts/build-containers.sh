@@ -20,6 +20,8 @@ unzip -d webapp/ webapp.zip
 unzip -d functions/ functions.zip
 unzip -d enrichment/ enrichment.zip
 
+CONTAINER_REGISTRY_NAME=$(jq -r '.CONTAINER_REGISTRY_NAME.value' ../inf_output.json)
+
 if [ -n "${CONTAINER_REGISTRY_NAME}" ]; then
     docker build -t "${CONTAINER_REGISTRY_NAME}".azurecr.us/webapp:latest -f Dockerfile.webapp .
     docker build -t "${CONTAINER_REGISTRY_NAME}".azurecr.us/function:latest -f Dockerfile.functions .
