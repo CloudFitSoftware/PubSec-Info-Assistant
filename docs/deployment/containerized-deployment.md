@@ -1,3 +1,5 @@
+# Containerized Deployment Guide
+
 ## Table of Contents <!-- omit in toc -->
 
 - [Install additional build requirements](#install-additional-build-requirements)
@@ -73,21 +75,25 @@ When using an existing OpenAI Instance, we do not need to upload and install the
 - Skip the nVidia/LLM steps and continue below
 - [Push Containers to ACR](#push-containers-to-acr)
 
-## Deployment for Disconnected Scenarios
+## Deployment for a Fully Disconnected Scenario
 
 > [!IMPORTANT]
 > As of March 21, 2024, Azure OpenAI is not available for disconnected scenarios.  This solution utilizes an Open Source Large Language Model (LLM), Mistral-7B-Instruct-v0.2.
 >
-> There are limitations to using smaller LLMs that can fit within availabile SKUs in a Microsoft Azure Government Tenant.  As we continue to evalutate solutions, additional LLMs may become available
+> There are limitations to using smaller LLMs that can fit within availabile SKUs in a Microsoft Azure Government Tenant.  As we continue to evalutate solutions, additional LLMs may become available.
 
 ## Manual Steps for Supporting a Containerized Deployment
+
+### Set CloudFit Flags
+
+In your `local.env` file, set the `CONTAINERIZED_APP_SERVICES` and `DISCONNECTED_AI` flags to `true` to achieve a fully disconnected deployment. 
 
 ### Build infrastructure, containers, and generate helm values
 
 ```bash
 make deploy-containers
 make build-containers
-./scripts/helm-create-values.sh < infra_output.json
+./scripts/helm-create-values.sh
 ```
 
 ### Get credentials

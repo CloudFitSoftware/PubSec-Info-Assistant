@@ -1,27 +1,27 @@
 resource "azurerm_cognitive_account" "account" {
-  count                           = var.useExistingAOAIService ? 0 : 1
-  name                            = var.name
-  location                        = var.location
-  resource_group_name             = var.resourceGroupName
-  kind                            = var.kind
-  sku_name                        = var.sku["name"]
-  public_network_access_enabled   = var.publicNetworkAccess == "Enabled" ? true : false
-  tags = var.tags
+  count                         = var.useExistingAOAIService ? 0 : 1
+  name                          = var.name
+  location                      = var.location
+  resource_group_name           = var.resourceGroupName
+  kind                          = var.kind
+  sku_name                      = var.sku["name"]
+  public_network_access_enabled = var.publicNetworkAccess == "Enabled" ? true : false
+  tags                          = var.tags
 }
 
 resource "azurerm_cognitive_deployment" "deployment" {
-  count                 = var.useExistingAOAIService ? 0 : length(var.deployments)
-  name                  = var.deployments[count.index].name
-  cognitive_account_id  = azurerm_cognitive_account.account[0].id
-  rai_policy_name       = var.deployments[count.index].rai_policy_name
+  count                = var.useExistingAOAIService ? 0 : length(var.deployments)
+  name                 = var.deployments[count.index].name
+  cognitive_account_id = azurerm_cognitive_account.account[0].id
+  rai_policy_name      = var.deployments[count.index].rai_policy_name
   model {
-    format              = "OpenAI"
-    name                = var.deployments[count.index].model.name
-    version             = var.deployments[count.index].model.version
+    format  = "OpenAI"
+    name    = var.deployments[count.index].model.name
+    version = var.deployments[count.index].model.version
   }
   scale {
-    type                = "Standard"
-    capacity            = var.deployments[count.index].sku_capacity
+    type     = "Standard"
+    capacity = var.deployments[count.index].sku_capacity
   }
 }
 

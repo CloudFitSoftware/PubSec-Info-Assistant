@@ -13,6 +13,7 @@ enrichment:
     azurekeyvaultname: ${DEPLOYMENT_KEYVAULT_ENDPOINT}
     azurekeyvaultendpoint: ${DEPLOYMENT_KEYVAULT_ENDPOINT}
     azureopenaiembeddingdeploymentname: ${AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME}
+    azureopenaiendpoint: ${AZURE_OPENAI_ENDPOINT}
     azureopenaiservice: ${AZURE_OPENAI_SERVICE}
     azuresearchindex: vector-index
     azuresearchservice: ${AZURE_SEARCH_SERVICE}
@@ -25,7 +26,8 @@ enrichment:
     embeddingvectorsize: 1536
     embeddingsqueue: embeddings-queue
     enableoryxbuild: true
-    isContainerizedDeployment: ${IS_CONTAINERIZED_DEPLOYMENT}
+    containerizedappservices: ${CONTAINERIZED_APP_SERVICES}
+    disconnectedai: ${DISCONNECTED_AI}
     loglevel: DEBUG
     maxembeddingrequeuecount: 5
     scmdobuildduringdeployment: true
@@ -33,7 +35,7 @@ enrichment:
     websitehttploggingretentiondays: 1
     websitescontainerstarttimelimit: 600
     weaviateUrl: http://infoasst-weaviate.infoasst.svc.cluster.local:8080
-
+    usesemanticreranker: ${USE_SEMANTIC_RERANKER}
   service:
     pipname:
     pipresourcegroup:

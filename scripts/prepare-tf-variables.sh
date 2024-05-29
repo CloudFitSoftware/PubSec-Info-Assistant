@@ -45,11 +45,11 @@ export TF_VAR_enableSharePointConnector=$ENABLE_SHAREPOINT_CONNECTOR
 export TF_VAR_enableMultimedia=$ENABLE_MULTIMEDIA
 export TF_VAR_maxCsvFileSize=$MAX_CSV_FILE_SIZE
 
-# Need to add CF vars for containers
-export TF_VAR_isContainerizedDeployment=$IS_CONTAINERIZED_DEPLOYMENT
+# CF vars for various deployments
+export TF_VAR_containerizedAppServices=$CONTAINERIZED_APP_SERVICES
+export TF_VAR_disconnectedAi=$DISCONNECTED_AI
 export TF_VAR_aksUserAgentPoolSku=$AKS_USER_AGENTPOOL_SKU
 export TF_VAR_useExistingAcr=$USE_EXISTING_ACR
 export TF_VAR_acrName=$ACR_NAME
 export TF_VAR_acrResourceGroup=$ACR_RESOURCE_GROUP
 export TF_VAR_keyVaultName=$DEPLOYMENT_KEYVAULT_NAME
-

@@ -42,7 +42,7 @@ variable "resourceGroupName" {
 }
 
 variable "keyVaultId" {
-  type    = string
+  type = string
 }
 
 variable "tenantId" {

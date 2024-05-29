@@ -30,7 +30,7 @@ azure_blob_content_storage_container = os.environ[
     "BLOB_STORAGE_ACCOUNT_OUTPUT_CONTAINER_NAME"
 ]
 azure_ai_translation_domain = os.environ["AZURE_AI_TRANSLATION_DOMAIN"]
-IS_CONTAINERIZED_DEPLOYMENT = os.getenv("IS_CONTAINERIZED_DEPLOYMENT", False)
+DISCONNECTED_AI = os.getenv("DISCONNECTED_AI", False)
 
 # Cosmos DB
 cosmosdb_url = os.environ["COSMOSDB_URL"]
@@ -44,12 +44,12 @@ cognitive_services_endpoint = os.environ["ENRICHMENT_ENDPOINT"]
 cognitive_services_account_location = os.environ["ENRICHMENT_LOCATION"]
 
 # Search Service
-if not IS_CONTAINERIZED_DEPLOYMENT:
+if not DISCONNECTED_AI:
     AZURE_SEARCH_SERVICE_ENDPOINT = os.environ.get("AZURE_SEARCH_SERVICE_ENDPOINT")
     AZURE_SEARCH_INDEX = os.environ.get("AZURE_SEARCH_INDEX") or "gptkbindex"
     SEARCH_CREDS = AzureKeyCredential(os.environ.get("AZURE_SEARCH_SERVICE_KEY"))
 else:
-    SEARCH_SERVICE_ENDPOINT = os.environ.get("SEARCH_SERVICE_ENDPOINT") #figure out how to handle if IS_CONTAINERIZED_DEPLOYMENT
+    SEARCH_SERVICE_ENDPOINT = os.environ.get("SEARCH_SERVICE_ENDPOINT") 
     SEARCH_INDEX = os.environ.get("SEARCH_INDEX") or "gptkbindex"
     SEARCH_CREDS = AzureKeyCredential(os.environ.get("SEARCH_SERVICE_KEY"))
 

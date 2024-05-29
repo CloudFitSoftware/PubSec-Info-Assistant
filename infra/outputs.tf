@@ -4,7 +4,7 @@ output "AZURE_LOCATION" {
 }
 
 output "AZURE_OPENAI_SERVICE" {
-  value = var.isContainerizedDeployment ? "" : (var.useExistingAOAIService ? var.azureOpenAIServiceName : module.openaiServices[0].name)
+  value = var.disconnectedAi ? "" : (var.useExistingAOAIService ? var.azureOpenAIServiceName : module.openaiServices[0].name)
 }
 
 output "AZURE_SEARCH_INDEX" {
@@ -12,11 +12,11 @@ output "AZURE_SEARCH_INDEX" {
 }
 
 output "AZURE_SEARCH_SERVICE" {
-  value = var.isContainerizedDeployment ? "" : module.searchServices[0].name
+  value = var.disconnectedAi ? "" : module.searchServices[0].name
 }
 
 output "AZURE_SEARCH_SERVICE_ENDPOINT" {
-  value = var.isContainerizedDeployment ? "" : module.searchServices[0].endpoint
+  value = var.disconnectedAi ? "" : module.searchServices[0].endpoint
 }
 
 output "AZURE_STORAGE_ACCOUNT" {
@@ -36,23 +36,23 @@ output "AZURE_STORAGE_UPLOAD_CONTAINER" {
 }
 
 output "BACKEND_URI" {
-  value = var.isContainerizedDeployment ? "" : module.backend[0].uri
+  value = var.containerizedAppServices ? "" : module.backend[0].uri
 }
 
 output "BACKEND_NAME" {
-  value = var.isContainerizedDeployment ? "" : module.backend[0].web_app_name 
+  value = var.containerizedAppServices ? "" : module.backend[0].web_app_name
 }
 
 output "RESOURCE_GROUP_NAME" {
   value = azurerm_resource_group.rg.name
 }
 
-output "AZURE_OPENAI_CHAT_GPT_DEPLOYMENT" {
+output "AZURE_OPENAI_CHATGPT_DEPLOYMENT" {
   value = var.chatGptDeploymentName != "" ? var.chatGptDeploymentName : var.chatGptModelName != "" ? var.chatGptModelName : "gpt-35-turbo-16k"
 }
 
 output "AZURE_OPENAI_RESOURCE_GROUP" {
-  value = var.isContainerizedDeployment ? "" : (var.useExistingAOAIService ? var.azureOpenAIResourceGroup : azurerm_resource_group.rg.name)
+  value = var.disconnectedAi ? "" : (var.useExistingAOAIService ? var.azureOpenAIResourceGroup : azurerm_resource_group.rg.name)
 }
 
 output "AZURE_FUNCTION_APP_NAME" {
@@ -96,11 +96,11 @@ output "TARGET_PAGES" {
 }
 
 output "ENRICHMENT_ENDPOINT" {
-  value = module.cognitiveServices.cognitiveServiceEndpoint
+  value = var.disconnectedAi ? "" : module.cognitiveServices.cognitiveServiceEndpoint
 }
 
 output "ENRICHMENT_NAME" {
-  value = module.cognitiveServices.cognitiveServicerAccountName
+  value = var.disconnectedAi ? "" : module.cognitiveServices.cognitiveServicerAccountName
 }
 
 output "TARGET_TRANSLATION_LANGUAGE" {
@@ -140,11 +140,11 @@ output "EMBEDDING_DEPLOYMENT_NAME" {
 }
 
 output "ENRICHMENT_APPSERVICE_NAME" {
-  value = var.isContainerizedDeployment ? "" : module.enrichmentApp[0].name
+  value = var.containerizedAppServices ? "" : module.enrichmentApp[0].name
 }
 
 output "ENRICHMENT_APPSERVICE_URL" {
-  value = var.isContainerizedDeployment ? "" : module.enrichmentApp[0].uri
+  value = var.containerizedAppServices ? "" : module.enrichmentApp[0].uri
 }
 
 output "DEPLOYMENT_KEYVAULT_NAME" {
@@ -159,8 +159,8 @@ output "CHAT_WARNING_BANNER_TEXT" {
   value = var.chatWarningBannerText
 }
 
-output "AZURE_OPENAI_ENDPOINT"  {
-  value = var.isContainerizedDeployment ? "" : (var.useExistingAOAIService ? "https://${var.azureOpenAIServiceName}.${var.azure_openai_domain}/" : module.openaiServices[0].endpoint)
+output "AZURE_OPENAI_ENDPOINT" {
+  value = var.disconnectedAi ? "" : (var.useExistingAOAIService ? "https://${var.azureOpenAIServiceName}.${var.azure_openai_domain}/" : module.openaiServices[0].endpoint)
 }
 
 output "AZURE_ENVIRONMENT" {
@@ -202,15 +202,11 @@ output "AZURE_BLOB_STORAGE_ACCOUNT" {
   value = module.storage.name
 }
 
-output "IS_CONTAINERIZED_DEPLOYMENT" {
-  value = var.isContainerizedDeployment
-}
-
-output "AZURE_OPENAI_CHAT_GPT_MODEL_NAME" {
+output "AZURE_OPENAI_CHATGPT_MODEL_NAME" {
   value = var.chatGptModelName
 }
 
-output "AZURE_OPENAI_CHAT_GPT_MODEL_VERSION" {
+output "AZURE_OPENAI_CHATGPT_MODEL_VERSION" {
   value = var.chatGptModelVersion
 }
 output "AZURE_OPENAI_EMBEDDINGS_MODEL_NAME" {
@@ -225,5 +221,21 @@ output "AZURE_TENANT_ID" {
 }
 
 output "CONTAINER_REGISTRY_NAME" {
-  value = var.isContainerizedDeployment ? module.acr[0].acrName : ""
+  value = var.containerizedAppServices ? module.acr[0].acrName : ""
+}
+
+output "CONTAINERIZED_APP_SERVICES" {
+  value = var.containerizedAppServices
+}
+
+output "DISCONNECTED_AI" {
+  value = var.disconnectedAi
+}
+
+output "AZURE_OPENAI_AUTHORITY_HOST" {
+  value = var.azure_openai_authority_host
+}
+
+output "USE_SEMANTIC_RERANKER" {
+  value = var.use_semantic_reranker
 }

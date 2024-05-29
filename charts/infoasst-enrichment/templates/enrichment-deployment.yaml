@@ -35,6 +35,8 @@ spec:
             value: "{{ .Values.enrichment.env.azureopenaiembeddingdeploymentname }}"
           - name: AZURE_OPENAI_SERVICE
             value: "{{ .Values.enrichment.env.azureopenaiservice }}"
+          - name: AZURE_OPENAI_ENDPOINT
+            value: "{{ .Values.enrichment.env.azureopenaiendpoint }}"
           - name: AZURE_SEARCH_INDEX
             value: "{{ .Values.enrichment.env.azuresearchindex }}"
           - name: AZURE_SEARCH_SERVICE
@@ -57,8 +59,10 @@ spec:
             value: "{{ .Values.enrichment.env.embeddingsqueue }}"
           - name: ENABLE_ORYX_BUILD
             value: "{{ .Values.enrichment.env.enableoryxbuild }}"
-          - name: IS_CONTAINERIZED_DEPLOYMENT
-            value: "{{ .Values.enrichment.env.isContainerizedDeployment }}"
+          - name: CONTAINERIZED_APP_SERVICES
+            value: "{{ .Values.enrichment.env.containerizedappservices }}"
+          - name: DISCONNECTED_AI
+            value: "{{ .Values.enrichment.env.disconnectedai }}"
           - name: LOG_LEVEL
             value: "{{ .Values.enrichment.env.loglevel }}"
           - name: MAX_EMBEDDING_REQUEUE_COUNT
@@ -73,6 +77,8 @@ spec:
             value: "{{ .Values.enrichment.env.websitescontainerstarttimelimit }}"
           - name: WEAVIATE_URL
             value: "{{ .Values.enrichment.env.weaviateUrl }}"
+          - name: USE_SEMANTIC_RERANKER
+            value: "{{ .Values.enrichment.env.usesemanticreranker }}"
         resources:
           limits:
             memory: "8G"

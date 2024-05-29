@@ -28,7 +28,7 @@ provider "azurerm" {
     }
   }
   skip_provider_registration = true
-  environment = var.azure_environment == "AzureUSGovernment" ? "usgovernment" : "public"
+  environment                = var.azure_environment == "AzureUSGovernment" ? "usgovernment" : "public"
 }
 
 provider "azuread" {

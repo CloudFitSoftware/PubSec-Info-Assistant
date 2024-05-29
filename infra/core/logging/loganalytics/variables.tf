@@ -1,13 +1,13 @@
 variable "logAnalyticsName" {
-  type    = string
+  type = string
 }
 
 variable "applicationInsightsName" {
-  type    = string
+  type = string
 }
 
 variable "location" {
-  type    = string
+  type = string
 }
 
 variable "tags" {
@@ -21,7 +21,7 @@ variable "skuName" {
 }
 
 variable "resourceGroupName" {
-  type    = string
+  type = string
 }
 
 variable "logWorkbookName" {

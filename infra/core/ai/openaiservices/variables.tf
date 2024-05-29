@@ -4,7 +4,7 @@ variable "name" {
 
 variable "location" {
   type    = string
-  default = "" 
+  default = ""
 }
 
 variable "tags" {
@@ -41,7 +41,7 @@ variable "resourceGroupName" {
   default = ""
 }
 
-variable "keyVaultId" { 
+variable "keyVaultId" {
   type = string
 }
 

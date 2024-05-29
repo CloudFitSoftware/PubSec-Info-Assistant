@@ -39,18 +39,20 @@ And have installed the following tools:
 ## Stage 1: Deployment
 
 ### Deployment Steps
-To deploy the application, follow these steps:
 
-1. **Review Deployment Instructions**: Open `docs/deployment/containerized-deployment.md` and read through the deployment process.
+1. **Deploy**:
+   - To deploy fully containerized, open `docs/deployment/containerized-deployment.md` and read through the containerized deployment process.
+   
+   **OR**
+   
+   - To deploy partially containerized, open `docs/deployment/hybrid-deployment.md` and read through the hybrid deployment process.
 
-2. **Deploy Application**: Execute the deployment steps as outlined in `containerized-deployment.md`. If you encounter errors, check the troubleshooting section for common issues and their solutions.
-
-3. **Verify Deployment**:
+2. **Verify Deployment**:
    - Log into portal.azure.us, and navigate to the Kubernetes service in your new resource group.
-   - Select "Services and ingresses"
+   - Select "Services and ingresses."
    - Select the blue link to test out the application.
 
-4. **Resolve Issues**:
+3. **Resolve Issues**:
    - Use `k9s` to monitor and debug the pods.
 
 ---
@@ -103,7 +105,7 @@ az aks get-credentials --resource-group <resource-group-name> --name <cluster-na
    - Confirm that the updated code is reflected in the new pod.
 
 ### Example
-In this example, lets imagine we have made changes to all of the pods, so they all need to be updated with the latest code.
+In this example, lets imagine we have made changes to all of the pods in a `fully containerized deployment`, so they all need to be updated with the latest code.
 
 Please note, for the weaviate pod, we separated the PVC for weaviate into its own chart called weaviate-storage. Do not helm delete this if you do not intend to lose the weaviate index.  
 

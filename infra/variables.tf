@@ -76,7 +76,7 @@ variable "enableSharePointConnector" {
 variable "enableMultimedia" {
   type    = bool
   default = false
-  
+
 }
 ////
 // variables that can vary based on the Azure environment being targeted
@@ -88,7 +88,7 @@ variable "azure_environment" {
 }
 
 variable "azure_websites_domain" {
-  type        = string
+  type = string
 }
 
 variable "azure_portal_domain" {
@@ -100,11 +100,11 @@ variable "azure_openai_domain" {
 }
 
 variable "azure_openai_authority_host" {
-  type = string  
+  type = string
 }
 
 variable "azure_arm_management_api" {
-  type        = string
+  type = string
 }
 
 variable "azure_ai_translation_domain" {
@@ -160,7 +160,7 @@ variable "aadMgmtClientSecret" {
 }
 
 variable "aadMgmtServicePrincipalId" {
-  type = string
+  type    = string
   default = ""
 }
 ////
@@ -186,7 +186,7 @@ variable "azureOpenAIServiceKey" {
 }
 
 variable "openAIServiceName" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -248,15 +248,15 @@ variable "appServicePlanName" {
 
 variable "appServiceSkuSize" {
   description = "The size of the app service plan for the IA website. Must match with the tier value in appServiceSkuTier."
-  type = string
-  default = "S1"
+  type        = string
+  default     = "S1"
 }
 
 variable "appServiceSkuTier" {
   description = "The tier of the app service plan for the IA website. Must match with the size value in appServiceSkuSize."
-  type = string
-  default = "Standard"
-  
+  type        = string
+  default     = "Standard"
+
 }
 
 variable "enrichmentAppServicePlanName" {
@@ -266,14 +266,14 @@ variable "enrichmentAppServicePlanName" {
 
 variable "enrichmentAppServiceSkuSize" {
   description = "The size of the app service plan for the enrichment service. Must match with the tier value in enrichmentAppServiceSkuTier."
-  type = string
-  default = "P1v3"
+  type        = string
+  default     = "P1v3"
 }
 
 variable "enrichmentAppServiceSkuTier" {
   description = "The tier of the app service plan for the enrichment service. Must match with the size value in enrichmentAppServiceSkuSize."
-  type = string
-  default = "PremiumV3"
+  type        = string
+  default     = "PremiumV3"
 }
 
 variable "logAnalyticsName" {
@@ -303,14 +303,14 @@ variable "functionsAppName" {
 
 variable "functionsAppSkuSize" {
   description = "The size of the app service plan for the functions app. Must match with the tier value in functionsAppSkuTier."
-  type = string
-  default = "S2"
+  type        = string
+  default     = "S2"
 }
 
 variable "functionsAppSkuTier" {
   description = "The tier of the app service plan for the functions app. Must match with the size value in functionsAppSkuSize."
-  type = string
-  default = "Standard"
+  type        = string
+  default     = "Standard"
 }
 
 variable "videoIndexerName" {
@@ -489,7 +489,7 @@ variable "applicationtitle" {
 }
 
 variable "video_indexer_api_version" {
-  type = string
+  type    = string
   default = "2024-01-01"
 }
 
@@ -502,54 +502,50 @@ variable "maxCsvFileSize" {
   default = "20"
 }
 
-variable "isContainerizedDeployment" {
-  type        = bool
-}
-
 // AKS
 
 variable "aksIdentityType" {
-  type        = string
-  default     = "SystemAssigned"
+  type    = string
+  default = "SystemAssigned"
 }
 
 variable "aksSystemVmSize" {
-  type        = string
-  default     = "Standard_D16ds_v5"
+  type    = string
+  default = "Standard_D16ds_v5"
 }
 
 variable "aksSkuTier" {
-  type        = string
-  default     = "Standard"
+  type    = string
+  default = "Standard"
 }
 
 variable "aksUserVmSize" {
-  type        = string
-  default     = "Standard_NC6s_v3"
+  type    = string
+  default = "Standard_NC6s_v3"
 }
 
 // ACR
 
 variable "useExistingAcr" {
-  type        = string
-  default     = ""
+  type    = string
+  default = ""
 }
 
 variable "acrSku" {
-  type = string
+  type    = string
   default = "Basic"
 }
 
 // Functions
 
 variable "imageName" {
-  type        = string
-  default     = "function"
+  type    = string
+  default = "function"
 }
 
 variable "imageTag" {
-  type        = string
-  default     = "latest"
+  type    = string
+  default = "latest"
 }
 
 variable "acrName" {
@@ -560,4 +556,14 @@ variable "acrName" {
 variable "acrResourceGroup" {
   type    = string
   default = ""
+}
+
+# feature flags
+
+variable "containerizedAppServices" {
+  type = bool
+}
+
+variable "disconnectedAi" {
+  type = bool
 }

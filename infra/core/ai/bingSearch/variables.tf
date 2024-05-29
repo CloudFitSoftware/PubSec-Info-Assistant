@@ -20,9 +20,9 @@ variable "arm_template_schema_mgmt_api" {
   type = string
 }
 
-variable "keyVaultId" { 
-  type = string
-  sensitive   = true
+variable "keyVaultId" {
+  type      = string
+  sensitive = true
 }
 
 variable "enableWebChat" {

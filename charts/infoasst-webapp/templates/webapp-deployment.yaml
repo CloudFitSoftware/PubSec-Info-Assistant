@@ -67,8 +67,8 @@ spec:
             value: "{{ .Values.webapp.env.enableoryxbuild }}"
           - name: ENRICHMENT_APPSERVICE_NAME
             value: "{{ .Values.webapp.env.enrichmentappservicename }}"
-          - name: IS_CONTAINERIZED_DEPLOYMENT
-            value: "{{ .Values.webapp.env.isContainerizedDeployment }}"
+          - name: CONTAINERIZED_APP_SERVICES
+            value: "{{ .Values.webapp.env.containerizedappservices }}"
           - name: QUERY_TERM_LANGUAGE
             value: "{{ .Values.webapp.env.querytermlanguage }}"
           - name: SCM_DO_BUILD_DURING_DEPLOYMENT
@@ -81,6 +81,18 @@ spec:
             value: "{{ .Values.webapp.env.websitehttploggingretentiondays }}"
           - name: WEAVIATE_URL
             value: "{{ .Values.webapp.env.weaviateUrl }}"
+          - name: DISCONNECTED_AI
+            value: "{{ .Values.webapp.env.disconnectedAi }}"
+          - name: AZURE_ARM_MANAGEMENT_API
+            value: "{{ .Values.webapp.env.azurearmmanagementapi }}"
+          - name: AZURE_LOCATION
+            value: "{{ .Values.webapp.env.azurelocation }}"
+          - name: AZURE_AI_TRANSLATION_DOMAIN
+            value: "{{ .Values.webapp.env.azureaitranslationdomain }}"
+          - name: AZURE_OPENAI_ENDPOINT
+            value: "{{ .Values.webapp.env.azureopenaiendpoint }}"
+          - name: USE_SEMANTIC_RERANKER
+            value: "{{ .Values.webapp.env.usesemanticreranker }}"
         resources:
           limits:
             memory: "4G"

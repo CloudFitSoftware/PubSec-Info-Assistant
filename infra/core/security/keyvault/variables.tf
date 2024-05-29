@@ -1,7 +1,7 @@
 
 
 variable "principalType" {
-  type = string
+  type    = string
   default = "ServicePrincipal"
   validation {
     condition     = contains(["Device", "ForeignGroup", "Group", "ServicePrincipal", "User"], var.principalType)

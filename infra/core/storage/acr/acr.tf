@@ -18,11 +18,11 @@ locals {
 }
 
 output "endpoint" {
-  value = "${local.name}.azurecr.us"
+  value       = "https://${local.name}.azurecr.us"
   description = "The endpoint URL of the Azure Container Registry."
 }
 
 output "acrName" {
-  value = local.name
+  value       = local.name
   description = "The name of the Azure Container Registry."
 }
