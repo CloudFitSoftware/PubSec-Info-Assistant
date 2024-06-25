@@ -67,8 +67,8 @@ spec:
             value: "{{ .Values.webapp.env.enableoryxbuild }}"
           - name: ENRICHMENT_APPSERVICE_NAME
             value: "{{ .Values.webapp.env.enrichmentappservicename }}"
-          - name: IS_CONTAINERIZED_DEPLOYMENT
-            value: "{{ .Values.webapp.env.isContainerizedDeployment }}"
+          - name: CONTAINERIZED_APP_SERVICES
+            value: "{{ .Values.webapp.env.containerizedappservices }}"
           - name: QUERY_TERM_LANGUAGE
             value: "{{ .Values.webapp.env.querytermlanguage }}"
           - name: SCM_DO_BUILD_DURING_DEPLOYMENT
@@ -81,6 +81,26 @@ spec:
             value: "{{ .Values.webapp.env.websitehttploggingretentiondays }}"
           - name: WEAVIATE_URL
             value: "{{ .Values.webapp.env.weaviateUrl }}"
+          - name: DISCONNECTED_AI
+            value: "{{ .Values.webapp.env.disconnectedAi }}"
+          - name: AZURE_ARM_MANAGEMENT_API
+            value: "{{ .Values.webapp.env.azurearmmanagementapi }}"
+          - name: AZURE_LOCATION
+            value: "{{ .Values.webapp.env.azurelocation }}"
+          - name: AZURE_AI_TRANSLATION_DOMAIN
+            value: "{{ .Values.webapp.env.azureaitranslationdomain }}"
+          - name: AZURE_OPENAI_ENDPOINT
+            value: "{{ .Values.webapp.env.azureopenaiendpoint }}"
+          - name: USE_SEMANTIC_RERANKER
+            value: "{{ .Values.webapp.env.usesemanticreranker }}"
+          - name: ENTRA_ID_CLIENT_ID
+            value: "{{ .Values.webapp.env.entraIdClientId }}"
+          - name: ENTRA_ID_CLIENT_SECRET
+            value: "{{ .Values.webapp.env.entraIdClientSecret }}"
+          - name: APP_DOMAIN
+            value: "{{ .Values.webapp.env.appDomain }}"
+          - name: AZURE_OPENAI_AUTHORITY_HOST
+            value: "{{ .Values.webapp.env.authorityHost }}"
         resources:
           limits:
             memory: "4G"
@@ -94,12 +114,52 @@ metadata:
   name: infoasst-webapp
   namespace: infoasst
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
-  - name: "5050"
+  - name: "80"
     port: 80
     targetPort: 5050
   selector:
     app: infoasst-webapp
-
-
+---
+# istio-gateway.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: my-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - "*"
+    port:
+      number: 80
+      name: http
+      protocol: HTTP
+    tls: 
+      httpsRedirect: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: istio
+  name: infoasst-webapp
+  namespace: infoasst
+spec:
+  tls:
+    - hosts:
+        - infoasst.{{ .Values.webapp.env.randomString }}.{{ .Values.webapp.env.topLevelDomain }}
+      secretName: infoasst-tls-cert
+  rules:
+    - host: infoasst.{{ .Values.webapp.env.randomString }}.{{ .Values.webapp.env.topLevelDomain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: infoasst-webapp
+              port:
+                number: 80

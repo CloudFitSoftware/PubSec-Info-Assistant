@@ -1,7 +1,7 @@
 import tiktoken
 import os
 str_to_bool = {'true': True, 'false': False}
-IS_CONTAINERIZED_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_CONTAINERIZED_DEPLOYMENT", "").lower()) or False
+DISCONNECTED_AI = str_to_bool.get(os.environ.get("DISCONNECTED_AI", "").lower()) or False
 
 #Values from https://platform.openai.com/docs/models/gpt-3-5
 
@@ -45,7 +45,7 @@ def num_tokens_from_messages(message: dict[str, str], model: str) -> int:
         num_tokens_from_messages(message, model)
         output: 11
     """
-    if IS_CONTAINERIZED_DEPLOYMENT:
+    if DISCONNECTED_AI:
         num_tokens = 4096
     else:
         encoding = tiktoken.encoding_for_model(get_oai_chatmodel_tiktok(model))

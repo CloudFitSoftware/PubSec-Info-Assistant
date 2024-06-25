@@ -1,0 +1,146 @@
+annotations:
+  checkov.io/skip1: CKV_K8S_8=cert-manager does not support liveness probes as of this point (https://github.com/jetstack/cert-manager/issues/3103)
+  checkov.io/skip2: CKV_K8S_9=cert-manager does not support readiness probes as of this point (https://github.com/jetstack/cert-manager/issues/3103)
+  checkov.io/skip3: CKV_K8S_10=checkov is not picking up resources for this chart correclty, therefore skipping this check.
+  checkov.io/skip4: CKV_K8S_11=checkov is not picking up resources for this chart correclty, therefore skipping this check.
+  checkov.io/skip5: CKV_K8S_12=checkov is not picking up resources for this chart correclty, therefore skipping this check.
+  checkov.io/skip6: CKV_K8S_13=checkov is not picking up resources for this chart correclty, therefore skipping this check.
+  checkov.io/skip7: CKV_K8S_20=Set via pod security policy.
+  checkov.io/skip8: CKV_K8S_21=Namespace is configured via helm charts. Skipping this checkov.
+  checkov.io/skip9: CKV_K8S_22=Set via pod security policy.
+  checkov.io/skip10: CKV_K8S_28=Set via pod security policy.
+  checkov.io/skip11: CKV_K8S_30=Set via pod security policy.
+  checkov.io/skip12: CKV_K8S_31=Being set via the pod security policy.
+  checkov.io/skip13: CKV_K8S_37=Set via pod security policy.
+  checkov.io/skip14: CKV_K8S_38=Cert Manager deployment fails when this option is set. PBI 72217. Skipping for now.
+  checkov.io/skip15: CKV_K8S_40=Set via pod security policy. Must run as user 1000.
+  checkov.io/skip16: CKV_K8S_43=cainjector is using image digest to pull the image. This is a false positive.
+  checkov.io/skip17: CKV_K8S_155=Skipping as there is no checkov link to see what this control is for (to new).
+
+global:
+  ## Reference to one or more secrets to be used when pulling images
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ##
+  imagePullSecrets: 
+   - name: "regcred" 
+
+installCRDs: true
+
+image:
+  repository: infoasstcrshared.azurecr.us/cert-manager-controller
+  # Override the image tag to deploy by setting this variable.
+  # If no value is set, the chart's appVersion will be used.
+  # tag: canary
+  tag: "v1.13.3"
+  digest: sha256:86d3877e7ab345b7bfca69caf5738c519a2994328424ca6a89eb210096b4bf5d
+  pullPolicy: Always
+
+extraArgs: []
+  # When this flag is enabled, secrets will be automatically removed when the certificate resource is deleted
+  # - --enable-certificate-owner-ref=true
+  # Use this flag to enable or disable arbitrary controllers, for example, disable the CertificiateRequests approver
+  # - --controllers=*,-certificaterequests-approver
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 150m
+    memory: 512Mi
+
+prometheus:
+  enabled: false
+  servicemonitor:
+    enabled: false
+    prometheusInstance: default
+    targetPort: 9402
+    path: /metrics
+    interval: 60s
+    scrapeTimeout: 30s
+    labels: {}
+    annotations: {}
+    
+  ## Liveness and readiness probe values
+  ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+  ##
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 1
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 150m
+      memory: 512Mi
+
+  image:
+    repository: infoasstcrshared.azurecr.us/cert-manager-webhook
+    # Override the image tag to deploy by setting this variable.
+    # If no value is set, the chart's appVersion will be used.
+    # tag: canary
+    tag: "v1.13.3"
+    digest: sha256:cdb462a2ef00b374475d79ad7597fb25668be7768e49d3672a9689a70ce67b86
+    pullPolicy: Always
+
+  # Enables default network policies for webhooks.
+  networkPolicy:
+    enabled: false
+    ingress:
+    - from:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+    egress:
+    - ports:
+      - port: 80
+        protocol: TCP
+      - port: 443
+        protocol: TCP
+      - port: 53
+        protocol: TCP
+      - port: 53
+        protocol: UDP
+      to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+
+  # Optional additional annotations to add to the cainjector Deployment
+  deploymentAnnotations: {}
+
+cainjector:
+  image:
+    repository: infoasstcrshared.azurecr.us/cert-manager-cainjector
+    tag: "v1.13.3"
+    digest: "sha256:42d974f819be9b1aa81f1cef8036669812d2248d47e7f3d364bd20fa63d5c9eb"
+    pullPolicy: Always
+
+acmesolver:
+  image:
+    repository: infoasstcrshared.azurecr.us/cert-manager-acmesolver
+    tag: "v1.13.3"
+    digest: "sha256:09c78a18a7da4bf7ad8f3ce8fb448843a3338834e231ca409e20ae3e6f50fe87"
+    pullPolicy: Always
+    # You can manage a registry with
+    # registry: quay.io
+    # repository: jetstack/cert-manager-acmesolver
+
+startupapicheck:
+  enabled: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 150m
+      memory: 512Mi

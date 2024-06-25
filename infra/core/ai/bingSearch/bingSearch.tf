@@ -14,10 +14,10 @@ resource "azurerm_resource_group_template_deployment" "bing_search" {
   count               = var.enableWebChat ? 1 : 0
   resource_group_name = var.resourceGroupName
   parameters_content = jsonencode({
-    "name"                      = { value = "${var.name}" },
-    "location"                  = { value = "Global" },
-    "sku"                       = { value = "${var.sku}" },
-    "tags"                      = { value = var.tags },
+    "name"     = { value = "${var.name}" },
+    "location" = { value = "Global" },
+    "sku"      = { value = "${var.sku}" },
+    "tags"     = { value = var.tags },
   })
   template_content = data.template_file.workflow.template
   # The filemd5 forces this to run when the file is changed

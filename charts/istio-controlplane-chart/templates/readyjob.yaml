@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: webhook-ready-check
+  namespace: {{ .Values.namespace }}
+spec:
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: kubectl
+        # image: {{ .Values.images.readyJob.repository }}@{{ .Values.images.readyJob.digest }}
+        image: {{ .Values.images.readyJob.repository }}:{{ .Values.images.readyJob.tag }}
+        command: ["bash"]
+        args:
+        - "-c"
+        - "echo -n 'Waiting on https://istiod/inject '; while [ \"$(curl -s -k https://istiod/inject)\" != \"no body found\" ]; do echo -n .; sleep 3; done; echo ' DONE';"
+        {{- if .Values.resources.readyJob }}
+        resources:
+          {{- toYaml .Values.resources.readyJob | nindent 10 -}}
+        {{- end }}
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+      {{- if .Values.images.pullSecrets.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.images.pullSecrets.name}}
+      {{- end }}
+      restartPolicy: OnFailure
+  ttlSecondsAfterFinished: 600

@@ -59,8 +59,7 @@ class ChatReadRetrieveReadApproachMistral(Approach):
         blob_client: BlobServiceClient,
         query_term_language: str,
         model_name: str,
-        model_version: str,
-        IS_CONTAINERIZED_DEPLOYMENT: str,
+        DISCONNECTED_AI: str,
         TARGET_EMBEDDING_MODEL: str,
     ):
         self.search_client = search_client
@@ -80,8 +79,7 @@ class ChatReadRetrieveReadApproachMistral(Approach):
         self.llm_api_base = 'http://infoasst-llm.infoasst.svc.cluster.local:8080/'
 
         self.model_name = model_name
-        self.model_version = model_version
-        self.IS_CONTAINERIZED_DEPLOYMENT = IS_CONTAINERIZED_DEPLOYMENT
+        self.DISCONNECTED_AI = DISCONNECTED_AI
 
     def remove_html_tags(self, text):
         pattern = re.compile('<.*?>')

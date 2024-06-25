@@ -7,9 +7,9 @@ resource "azurerm_kubernetes_cluster" "aks" {
   dns_prefix          = "${var.clusterName}dns"
 
   default_node_pool {
-    name                = "agentpool"
-    node_count          = 2
-    vm_size             = var.aksSystemVmSize
+    name       = "agentpool"
+    node_count = 2
+    vm_size    = var.aksSystemVmSize
   }
 
   identity {
@@ -43,26 +43,26 @@ resource "azurerm_key_vault_access_policy" "policy" {
 
 # note: not completely sure if these values are correct quite yet
 output "aksManagedRG" {
-  value = azurerm_kubernetes_cluster.aks.node_resource_group
+  value       = azurerm_kubernetes_cluster.aks.node_resource_group
   description = "The auto-generated resource group for AKS cluster nodes."
 }
 
 output "aksPrincipalId" {
-  value = azurerm_kubernetes_cluster.aks.identity.0.principal_id
+  value       = azurerm_kubernetes_cluster.aks.identity.0.principal_id
   description = "The Principal ID of the AKS cluster's identity."
 }
 
 output "kubeletPrincipalId" {
-  value = azurerm_kubernetes_cluster.aks.kubelet_identity[0]
+  value       = azurerm_kubernetes_cluster.aks.kubelet_identity[0]
   description = "The Principal ID of the AKS cluster's kubelet identity."
 }
 
 output "aksId" {
-  value = azurerm_kubernetes_cluster.aks.id
+  value       = azurerm_kubernetes_cluster.aks.id
   description = "The Resource ID of the AKS cluster."
 }
 
 output "kubletId" {
-  value = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  value       = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
   description = "The Resource ID of the AKS cluster."
 }

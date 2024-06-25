@@ -1,9 +1,13 @@
+# Containerized Deployment Guide
+
 ## Table of Contents <!-- omit in toc -->
 
 - [Install additional build requirements](#install-additional-build-requirements)
   - [Docker](#docker)
   - [kubectl](#kubectl)
   - [helm](#helm)
+  - [make](#make)
+  - [terraform](#terraform)
   - [(optional) k9s](#optional-k9s)
 - [Deployment with Existing OpenAI Instance](#deployment-with-existing-openai-instance)
 - [Deployment for Disconnected Scenarios](#deployment-for-disconnected-scenarios)
@@ -49,6 +53,18 @@ This is required to configure AKS (or any Kubernetes cluter) with all of the req
 
 - [helm Install](https://helm.sh/docs/intro/install/)
 
+### make
+
+This is required to run make commands to build application, update code, etc
+
+- [make Install](https://marketplace.visualstudio.com/items?itemName=ms-vscode.makefile-tools)
+
+### terraform
+
+This is required to stand up the application resources in Azure
+
+- [terraform Install](https://developer.hashicorp.com/terraform/tutorials/azure-get-started/install-cli)
+
 ### (optional) k9s
 
 K9s is a tool to help manage clusters in a text-based GUI.  This is **not** a required installation
@@ -73,31 +89,52 @@ When using an existing OpenAI Instance, we do not need to upload and install the
 - Skip the nVidia/LLM steps and continue below
 - [Push Containers to ACR](#push-containers-to-acr)
 
-## Deployment for Disconnected Scenarios
+## Deployment for a Fully Disconnected Scenario
 
 > [!IMPORTANT]
 > As of March 21, 2024, Azure OpenAI is not available for disconnected scenarios.  This solution utilizes an Open Source Large Language Model (LLM), Mistral-7B-Instruct-v0.2.
 >
-> There are limitations to using smaller LLMs that can fit within availabile SKUs in a Microsoft Azure Government Tenant.  As we continue to evalutate solutions, additional LLMs may become available
+> There are limitations to using smaller LLMs that can fit within availabile SKUs in a Microsoft Azure Government Tenant.  As we continue to evalutate solutions, additional LLMs may become available.
 
 ## Manual Steps for Supporting a Containerized Deployment
+
+### Set up `local.env` file
+
+Navigate to `scripts\environments\local.env.example` and copy contents into a new file called `local.env`.
+Set your env variables.
+
+### Set CloudFit Flags
+
+In your `local.env` file, set the `CONTAINERIZED_APP_SERVICES` and `DISCONNECTED_AI` flags to `true` to achieve a fully disconnected deployment. 
+
+### Get credentials
+
+If deploying to Azure Commerical:
+```bash
+az cloud set -n AzureCloud
+```
+If deploying to MAG (Microsoft Azure Government):
+```bash
+az cloud set -n AzureUSGovernment
+```
+
+```powershell
+az login
+```
 
 ### Build infrastructure, containers, and generate helm values
 
 ```bash
 make deploy-containers
 make build-containers
-./scripts/helm-create-values.sh < infra_output.json
+./scripts/helm-create-values.sh
 ```
-
-### Get credentials
+### Get credentials for ACR and AKS
 
 ```powershell
-az login
 az acr login -n <acr_name>
 az aks get-credentials --resource-group <resource_group_name> --name <cluster_name>
 ```
-
 ### Install nVidia drivers in AKS
 
 ```bash
@@ -108,6 +145,7 @@ helm upgrade -i nvdp nvdp/nvidia-device-plugin \
   --create-namespace \
   --version 0.14.5
 ```
+Note: you may need to install a pod to initiate the namespace using - [Install kubernetes pods using helm](#install-kubernetes-pods-using-helm)
 More information can be found here: https://github.com/NVIDIA/k8s-device-plugin?tab=readme-ov-file#deployment-via-helm
 
 ### Upload the LLM Tensor Files
@@ -152,7 +190,6 @@ $STORAGE_KEY=$(az storage account keys list --resource-group <resourcegroup> --a
 
 kubectl create secret generic infoasst-llms-share --from-literal=azurestorageaccountname=<storageaccount> --from-literal=azurestorageaccountkey=$STORAGE_KEY --namespace infoasst
 ```
-
 ### Build the LLM server
 
 ```bash
@@ -169,6 +206,41 @@ docker push each image for `webapp`, `function`, `weaviate`, `t2v`, `reranker`, 
 docker push <acrname>.azurecr.us/<container_name>:latest
 ```
 
+In addition, you must pull images for the ingress and https cert manager from Iron Bank, retag those images, and push them to your ACR. The code below assumes you are pushing to an ACR called `infoasstcrshared.azurecr.us`.
+``` powershell
+docker pull registry1.dso.mil/ironbank/opensource/istio/operator:1.19.6
+docker tag registry1.dso.mil/ironbank/opensource/istio/operator:1.19.6 infoasstcrshared.azurecr.us/istio/operator:1.19.6
+docker push infoasstcrshared.azurecr.us/istio/operator:1.19.6
+
+docker pull registry1.dso.mil/ironbank/opensource/istio/pilot:1.19.6
+docker tag registry1.dso.mil/ironbank/opensource/istio/pilot:1.19.6 infoasstcrshared.azurecr.us/istio/pilot:1.19.6
+docker push infoasstcrshared.azurecr.us/istio/pilot:1.19.6
+
+docker pull registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.19.6
+docker tag registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.19.6 infoasstcrshared.azurecr.us/istio/proxyv2:1.19.6
+docker push infoasstcrshared.azurecr.us/istio/proxyv2:1.19.6
+
+docker pull registry1.dso.mil/ironbank/jetstack/cert-manager-cainjector:v1.13.3
+docker tag registry1.dso.mil/ironbank/jetstack/cert-manager-cainjector:v1.13.3 infoasstcrshared.azurecr.us/cert-manager-cainjector:v1.13.3
+docker push infoasstcrshared.azurecr.us/cert-manager-cainjector:v1.13.3
+
+docker pull registry1.dso.mil/ironbank/jetstack/cert-manager-controller:v1.13.3
+docker tag registry1.dso.mil/ironbank/jetstack/cert-manager-controller:v1.13.3 infoasstcrshared.azurecr.us/cert-manager-controller:v1.13.3
+docker push infoasstcrshared.azurecr.us/cert-manager-controller:v1.13.3
+
+docker pull registry1.dso.mil/ironbank/jetstack/cert-manager-webhook:v1.13.3
+docker tag registry1.dso.mil/ironbank/jetstack/cert-manager-webhook:v1.13.3 infoasstcrshared.azurecr.us/cert-manager-webhook:v1.13.3
+docker push infoasstcrshared.azurecr.us/cert-manager-webhook:v1.13.3
+
+docker pull quay.io/jetstack/cert-manager-acmesolver:v1.13.3
+docker tag quay.io/jetstack/cert-manager-acmesolver:v1.13.3 infoasstcrshared.azurecr.us/cert-manager-acmesolver:v1.13.3
+docker push infoasstcrshared.azurecr.us/cert-manager-acmesolver:v1.13.3
+
+docker pull registry1.dso.mil/ironbank/cloudfit/cfs/cfs-powershell-input:1.0.22
+docker tag registry1.dso.mil/ironbank/cloudfit/cfs/cfs-powershell-input:1.0.22 infoasstcrshared.azurecr.us/cloudfit/cfs/cfs-powershell-input:1.0.22
+docker push infoasstcrshared.azurecr.us/cloudfit/cfs/cfs-powershell-input:1.0.22
+```
+
 ### Install kubernetes pods and weaviate PVC using helm
 Please note that the weaviate PVC has its own seperate helm chart, weaviate-storage-deployment.yaml. You should only need to install this PVC once. 
 **Deleting it will cause you to lose your weaviate index.**
@@ -176,7 +248,24 @@ Please note that the weaviate PVC has its own seperate helm chart, weaviate-stor
 helm install each chart for `webapp`, `function`, `weaviate-container`, `weaviate-storage`, `t2v`, `reranker`, `llm`, and `enrichment`
 
 ```powershell
+cd charts
 helm install infoasst-<pod_name> ./infoasst-<pod_name> --namespace infoasst --create-namespace
+```
+
+### Ingress Setup
+
+```bash
+helm upgrade -i -f "./charts/cert-manager-chart/values-cfs.yaml" cert-manager "./charts/cert-manager-chart" --namespace cert-manager --create-namespace
+
+helm upgrade -i istio-operator "./charts/istio-operator-chart" --namespace istio-operator --create-namespace
+
+helm upgrade -i istio-controlplane --wait --wait-for-jobs "./charts/istio-controlplane-chart" `
+    --namespace istio-system `
+    --create-namespace
+
+helm upgrade -i cert "./charts/cert-chart" `
+    --set FQDNSuffix=".cloudfit.software" `
+    --set letsEncryptEmail="command_and_control_Mailbox@cloudfitsoftware.com"
 ```
 
 ## Roadmap

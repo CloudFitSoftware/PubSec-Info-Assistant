@@ -1,0 +1,136 @@
+## @section Global
+## @param namespace select the namespace you want to deploy the istio operator crd to
+namespace: istio-system
+
+## @section Image paramters
+## Controls which images istio uses
+
+## @param images.hub The istio hub all images are pulled from
+## @param images.tag the tag istio will expect for all images unless overwrote
+
+images:
+  hub: infoasstcrshared.azurecr.us/istio/pilot
+  tag: "1.19.6"
+  ## @param images.pullSecrets.enabled If image pull secrets will be added
+  ## @param images.pullSecrets.name the name of the existing
+  pullSecrets:
+    enabled: true
+    name: regcred
+  ## @param images.proxy.repository the proxy image repository that will override the hub value
+  ## @param images.proxy.digest the proxy image digest, will override images.tag
+  proxy:
+    repository: infoasstcrshared.azurecr.us/istio/proxyv2
+    tag: "1.19.6"
+  ## @param images.pilot.repository the pilot image repository that will override the hub value
+  ## @param images.pilot.digest the pilot image digest, will override images.tag
+  pilot:
+    repository: infoasstcrshared.azurecr.us/istio/pilot
+    tag: "1.19.6"
+  ## @param images.readyJob.repository the ready job image repository.  Requires bash/curl
+  ## @param images.readyJob.digest the ready job image digest
+  readyJob:
+    repository: infoasstcrshared.azurecr.us/cloudfit/cfs/cfs-powershell-input
+    tag: "1.0.22"
+
+## This section was added manual for global configuration
+global:
+  proxy:
+    holdApplicationUntilProxyStarts: true
+
+
+## @section Mesh Configuration
+## Configures options for the entire mesh
+
+## @param meshConfig.useStdout sends all log files to stdout
+## @param meshConfig.useJsonLogEncoding uses json log encoding for access logs
+## @param meshConfig.logLevel sets the log level for access and istio logs
+meshConfig:
+  useStdout: true
+  useJsonLogEncoding: true
+  logLevel: "info"
+
+## @section Ingress Gateways
+## Controls how the ingress gateways will be deployed
+
+pilot:
+  hpa:
+    minReplicas: 2
+    maxReplicas: 5
+    cpuTargetUtilization: 80
+
+ingressGateways:
+  ## @param ingressGateways.serviceAnnotations a range to set service annotations for every ingress gateway
+  serviceAnnotations: {
+    service.beta.kubernetes.io/azure-pip-name: infoasst-ip,
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: infoasst-baron-case-demo
+  }
+  ## @param ingressGateways.hpa.minReplicas the hpa min replicas for all gateways
+  ## @param ingressGateways.hpa.maxReplicas the hpa max replicas for all gateways
+  ## @param ingressGateways.hpa.cpuTargetUtilization when the ingress gateway will scale up to the next replica
+  hpa: #hpa spec to apply to all ingress gateways.
+    minReplicas: 2
+    maxReplicas: 5
+    cpuTargetUtilization: 80
+  ## @param ingressGateways.resources.requests.cpu the requested cpu by the ingress gateways
+  ## @param ingressGateways.resources.requests.memory the requested memory by the ingress gateways
+  ## @param ingressGateways.resources.limits.cpu the limited cpu by the ingress gateways
+  ## @param ingressGateways.resources.limits.memory the limited memory by the ingress gateways
+  resources: # Resource setup for all ingress gateways
+    requests:
+      cpu: 300m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  ## @param ingressGateways.default.enabled if the default gateway will be created
+  ## @param ingressGateways.default.serviceAnnotations the service annotations to be added to the default gateway's services
+  ## @param ingressGateways.default.loadBalancerStaticIp the default gateways static ip. Do not set to make it dynamic
+  default:
+    enabled: true
+    serviceAnnotations: {}
+    loadBalancerStaticIp: {}
+  ## @skip ingressGateways.ipGatewaySetup
+  ## @section Gateway Setup
+  ## @extra ingressGateways.ipGatewaySetup [object] object to create instances of istio gatways, each gateway will have a different LB ipaddress
+  ## @extra ingressGateways.ipGatewaySetup[n].Name The name of the gatweay
+  ## @extra ingressGateways.ipGatewaySetup[n].serviceAnnotations service annotations to add to this gatway
+  ## @extra ingressGateways.ipGatewaySetup[n].loadBalancerStaticIp the static ip to set for this gateway, leave unset to make dynmaic
+  # ipGatewaySetup: # see readme for default configuration, this will create a new ip for each gateway
+  # - name: cfs-api-ingressgateway
+  #   serviceAnnotations: {}
+  #   loadBalancerStaticIp: {}
+  # - name: cfs-portal-ingressgateway
+  #   serviceAnnotations: {}
+  #   loadBalancerStaticIp: {}
+  # - name: cfs-grafana-ingressgateway
+  #   serviceAnnotations: {}
+  #   loadBalancerStaticIp: {}
+  # - name: cfs-keycloak-ingressgateway
+  #   serviceAnnotations: {}
+  #   loadBalancerStaticIp: {}
+resources:
+  pilot:
+    requests:
+      cpu: 35m
+      memory: 85Mi
+    limits:
+      cpu: 100m
+      memory: 192Mi
+  globalProxy:
+    requests:
+      cpu: 50m
+      memory: 60Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  readyJob:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+#High Availability Enabled/Disabled
+ha:
+  enabled: true

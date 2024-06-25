@@ -4,7 +4,7 @@ variable "name" {
 
 variable "location" {
   type    = string
-  default = "" 
+  default = ""
 }
 
 variable "tags" {
@@ -13,7 +13,7 @@ variable "tags" {
 }
 
 variable "customSubDomainName" {
-  type    = string
+  type = string
 }
 
 variable "deployments" {
@@ -45,6 +45,6 @@ variable "resourceGroupName" {
   default = ""
 }
 
-variable "keyVaultId" { 
+variable "keyVaultId" {
   type = string
 }

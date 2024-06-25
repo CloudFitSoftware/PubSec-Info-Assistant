@@ -77,12 +77,13 @@ for key, value in ENV.items():
 
 str_to_bool = {'true': True, 'false': False}
 
-IS_CONTAINERIZED_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_CONTAINERIZED_DEPLOYMENT", "").lower()) or False
+DISCONNECTED_AI = str_to_bool.get(os.environ.get("DISCONNECTED_AI").lower()) or False
 WEAVIATE_URL = os.environ.get("WEAVIATE_URL", "") 
 WEAVIATE_INDEX_NAME = os.environ.get("WEAVIATE_INDEX", "WEAVIATE")
 
 AZURE_KEY_VAULT_NAME = os.environ.get("AZURE_KEY_VAULT_NAME") or ""
 AZURE_OPENAI_AUTHORITY_HOST = os.environ.get("AZURE_OPENAI_AUTHORITY_HOST") or "AzureCloud"
+AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
 
 kv_uri = AZURE_KEY_VAULT_NAME
 
@@ -95,20 +96,20 @@ azure_credential = DefaultAzureCredential(authority=AUTHORITY)
 
 keyVaultClient = SecretClient(vault_url=kv_uri, credential=azure_credential)
 
-if IS_CONTAINERIZED_DEPLOYMENT:
+if DISCONNECTED_AI:
     AZURE_OPENAI_SERVICE_KEY = AZURE_SEARCH_SERVICE_KEY = ""
 else:
     AZURE_OPENAI_SERVICE_KEY = keyVaultClient.get_secret("AZURE-OPENAI-SERVICE-KEY").value
-    AZURE_SEARCH_SERVICE_KEY = keyVaultClient.get_secret("AZURE-SEARCH-SERVICE-KEY").value #figure out how to handle if IS_CONTAINERIZED_DEPLOYMENT
+    AZURE_SEARCH_SERVICE_KEY = keyVaultClient.get_secret("AZURE-SEARCH-SERVICE-KEY").value 
     
 AZURE_BLOB_STORAGE_KEY = keyVaultClient.get_secret("AZURE-BLOB-STORAGE-KEY").value
 BLOB_CONNECTION_STRING = keyVaultClient.get_secret("BLOB-CONNECTION-STRING").value
 AZURE_STORAGE_CONNECTION_STRING = keyVaultClient.get_secret("BLOB-CONNECTION-STRING").value
 COSMOSDB_KEY = keyVaultClient.get_secret("COSMOSDB-KEY").value
 
-search_creds = AzureKeyCredential(AZURE_SEARCH_SERVICE_KEY) #figure out how to handle if IS_CONTAINERIZED_DEPLOYMENT
+search_creds = AzureKeyCredential(AZURE_SEARCH_SERVICE_KEY)
 
-openai.api_base = ENV["AZURE_OPENAI_ENDPOINT"]
+openai.api_base = AZURE_OPENAI_ENDPOINT
 openai.api_type = "azure"
 openai.api_key = AZURE_OPENAI_SERVICE_KEY
 openai.api_version = "2023-12-01-preview"
@@ -354,7 +355,7 @@ class WeaviateSearch:
 def index_sections(chunks):
     """ Pushes a batch of content to the search index based on deployment type
     """
-    if IS_CONTAINERIZED_DEPLOYMENT:
+    if DISCONNECTED_AI:
         search_client = WeaviateSearch(url=WEAVIATE_URL, index_name=WEAVIATE_INDEX_NAME)
         search_client.index_documents(chunks)
     else:
@@ -479,7 +480,7 @@ def poll_queue() -> None:
 
                 # logic added because weaviate does embedding internally
                 embedding_data = None 
-                if not IS_CONTAINERIZED_DEPLOYMENT:
+                if not DISCONNECTED_AI:
                     try:
                         # try first to read the embedding from the chunk, in case it was already created
                         embedding_data = chunk_dict['contentVector']

@@ -100,10 +100,11 @@ class ChatReadRetrieveReadApproach(Approach):
         enrichment_appservice_uri: str,
         target_translation_language: str,
         enrichment_endpoint:str,
+        azure_location:str,
         enrichment_key:str,
         azure_ai_translation_domain: str,
         use_semantic_reranker: bool,
-        IS_CONTAINERIZED_DEPLOYMENT: str
+        DISCONNECTED_AI: str
     ):
         self.search_client = search_client
         self.chatgpt_deployment = chatgpt_deployment
@@ -119,6 +120,7 @@ class ChatReadRetrieveReadApproach(Approach):
         self.escaped_target_model = re.sub(r'[^a-zA-Z0-9_\-.]', '_', target_embedding_model)
         self.target_translation_language=target_translation_language
         self.enrichment_endpoint=enrichment_endpoint
+        self.azure_location=azure_location
         self.enrichment_key=enrichment_key
         self.oai_endpoint=oai_endpoint
         self.embedding_service_url = enrichment_appservice_uri
@@ -131,7 +133,7 @@ class ChatReadRetrieveReadApproach(Approach):
 
         self.model_name = model_name
         self.model_version = model_version
-        self.IS_CONTAINERIZED_DEPLOYMENT = IS_CONTAINERIZED_DEPLOYMENT
+        self.DISCONNECTED_AI = DISCONNECTED_AI
 
     # def run(self, history: list[dict], overrides: dict) -> any:
     async def run(self, history: Sequence[dict[str, str]], overrides: dict[str, Any], citation_lookup: dict[str, Any], thought_chain: dict[str, Any]) -> Any:
@@ -153,6 +155,8 @@ class ChatReadRetrieveReadApproach(Approach):
 
         # Detect the language of the user's question
         detectedlanguage = self.detect_language(user_q)
+
+        
 
         if detectedlanguage != self.target_translation_language:
             user_question = self.translate_response(user_q, self.target_translation_language)
@@ -418,7 +422,7 @@ class ChatReadRetrieveReadApproach(Approach):
     def detect_language(self, text: str) -> str:
         """ Function to detect the language of the text"""
         try:
-            endpoint_region = self.enrichment_endpoint.split("https://")[1].split(".api")[0]
+            endpoint_region = self.azure_location
             api_detect_endpoint = f"https://{self.azure_ai_translation_domain}/detect?api-version=3.0"
             headers = {
                 'Ocp-Apim-Subscription-Key': self.enrichment_key,
@@ -438,7 +442,8 @@ class ChatReadRetrieveReadApproach(Approach):
 
     def translate_response(self, response: str, target_language: str) -> str:
         """ Function to translate the response to target language"""
-        endpoint_region = self.enrichment_endpoint.split("https://")[1].split(".api")[0]      
+
+        endpoint_region = self.azure_location      
         api_translate_endpoint = f"https://{self.azure_ai_translation_domain}/translate?api-version=3.0"
         headers = {
             'Ocp-Apim-Subscription-Key': self.enrichment_key,

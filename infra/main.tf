@@ -1,8 +1,8 @@
 locals {
-  tags            = { ProjectName = "Information Assistant", BuildNumber = var.buildNumber }
-  azure_roles     = jsondecode(file("${path.module}/azure_roles.json"))
-  abbr            = jsondecode(file("${path.module}/abbreviations.json"))
-  selected_roles  = ["CognitiveServicesOpenAIUser", "StorageBlobDataReader", "StorageBlobDataContributor", "SearchIndexDataReader", "SearchIndexDataContributor"]
+  tags           = { ProjectName = "Information Assistant", BuildNumber = var.buildNumber }
+  azure_roles    = jsondecode(file("${path.module}/azure_roles.json"))
+  abbr           = jsondecode(file("${path.module}/abbreviations.json"))
+  selected_roles = ["CognitiveServicesOpenAIUser", "StorageBlobDataReader", "StorageBlobDataContributor", "SearchIndexDataReader", "SearchIndexDataContributor"]
 }
 
 data "azurerm_client_config" "current" {}
@@ -22,15 +22,17 @@ resource "azurerm_resource_group" "rg" {
 }
 
 module "entraObjects" {
-  source                            = "./core/aad"
-  isInAutomation                    = var.isInAutomation
-  requireWebsiteSecurityMembership  = var.requireWebsiteSecurityMembership
-  randomString                      = random_string.random.result
-  azure_websites_domain             = var.azure_websites_domain
-  aadWebClientId                    = var.aadWebClientId
-  aadMgmtClientId                   = var.aadMgmtClientId
-  aadMgmtServicePrincipalId         = var.aadMgmtServicePrincipalId
-  aadMgmtClientSecret               = var.aadMgmtClientSecret
+  source                           = "./core/aad"
+  isInAutomation                   = var.isInAutomation
+  requireWebsiteSecurityMembership = var.requireWebsiteSecurityMembership
+  randomString                     = random_string.random.result
+  azure_websites_domain            = var.azure_websites_domain
+  aadWebClientId                   = var.aadWebClientId
+  aadMgmtClientId                  = var.aadMgmtClientId
+  aadMgmtServicePrincipalId        = var.aadMgmtServicePrincipalId
+  aadMgmtClientSecret              = var.aadMgmtClientSecret
+  containerizedAppServices         = var.containerizedAppServices
+  topLevelDomain                   = var.topLevelDomain
 }
 
 module "logging" {
@@ -53,81 +55,83 @@ module "storage" {
   allowBlobPublicAccess = false
   publicNetworkAccess   = true
   resourceGroupName     = azurerm_resource_group.rg.name
-  keyVaultId            = module.kvModule.keyVaultId 
+  keyVaultId            = module.kvModule.keyVaultId
   deleteRetentionPolicy = {
     days = 7
   }
-  containers            = ["content","website","upload","function","logs","config"]
-  queueNames            = ["pdf-submit-queue","pdf-polling-queue","non-pdf-submit-queue","media-submit-queue","text-enrichment-queue","image-enrichment-queue","embeddings-queue"]
+  containers = ["content", "website", "upload", "function", "logs", "config"]
+  queueNames = ["pdf-submit-queue", "pdf-polling-queue", "non-pdf-submit-queue", "media-submit-queue", "text-enrichment-queue", "image-enrichment-queue", "embeddings-queue"]
 }
 
 module "enrichmentApp" {
-  count           = var.isContainerizedDeployment ? 0 : 1
-  source                                    = "./core/host/enrichmentapp"
-  name                                      = var.enrichmentServiceName != "" ? var.enrichmentServiceName : "infoasst-enrichmentweb-${random_string.random.result}"
-  plan_name                                 = var.enrichmentAppServicePlanName != "" ? var.enrichmentAppServicePlanName : "infoasst-enrichmentasp-${random_string.random.result}"
-  location                                  = var.location 
-  tags                                      = local.tags
+  count     = var.containerizedAppServices ? 0 : 1
+  source    = "./core/host/enrichmentapp"
+  name      = var.enrichmentServiceName != "" ? var.enrichmentServiceName : "infoasst-enrichmentweb-${random_string.random.result}"
+  plan_name = var.enrichmentAppServicePlanName != "" ? var.enrichmentAppServicePlanName : "infoasst-enrichmentasp-${random_string.random.result}"
+  location  = var.location
+  tags      = local.tags
   sku = {
-    size                                    = var.enrichmentAppServiceSkuSize
-    tier                                    = var.enrichmentAppServiceSkuTier
-    capacity                                = 3
+    size     = var.enrichmentAppServiceSkuSize
+    tier     = var.enrichmentAppServiceSkuTier
+    capacity = 3
   }
-  kind                                      = "linux"
-  reserved                                  = true
-  resourceGroupName                         = azurerm_resource_group.rg.name
-  storageAccountId                          = "/subscriptions/${var.subscriptionId}/resourceGroups/${azurerm_resource_group.rg.name}/providers/Microsoft.Storage/storageAccounts/${module.storage.name}/services/queue/queues/${var.embeddingsQueue}"
-  scmDoBuildDuringDeployment                = true
-  managedIdentity                           = true
-  logAnalyticsWorkspaceResourceId           = module.logging.logAnalyticsId
-  applicationInsightsConnectionString       = module.logging.applicationInsightsConnectionString
-  alwaysOn                                  = true
-  healthCheckPath                           = "/health"
-  appCommandLine                            = "gunicorn -w 4 -k uvicorn.workers.UvicornWorker app:app"
-  keyVaultUri                               = module.kvModule.keyVaultUri
-  keyVaultName                              = module.kvModule.keyVaultName
+  kind                                = "linux"
+  reserved                            = true
+  resourceGroupName                   = azurerm_resource_group.rg.name
+  storageAccountId                    = "/subscriptions/${var.subscriptionId}/resourceGroups/${azurerm_resource_group.rg.name}/providers/Microsoft.Storage/storageAccounts/${module.storage.name}/services/queue/queues/${var.embeddingsQueue}"
+  scmDoBuildDuringDeployment          = true
+  managedIdentity                     = true
+  logAnalyticsWorkspaceResourceId     = module.logging.logAnalyticsId
+  applicationInsightsConnectionString = module.logging.applicationInsightsConnectionString
+  alwaysOn                            = true
+  healthCheckPath                     = "/health"
+  appCommandLine                      = "gunicorn -w 4 -k uvicorn.workers.UvicornWorker app:app"
+  keyVaultUri                         = module.kvModule.keyVaultUri
+  keyVaultName                        = module.kvModule.keyVaultName
   appSettings = {
-    EMBEDDINGS_QUEUE                        = var.embeddingsQueue
-    LOG_LEVEL                               = "DEBUG"
-    DEQUEUE_MESSAGE_BATCH_SIZE              = 1
-    AZURE_BLOB_STORAGE_ACCOUNT              = module.storage.name
-    AZURE_BLOB_STORAGE_CONTAINER            = var.contentContainerName
-    AZURE_BLOB_STORAGE_UPLOAD_CONTAINER     = var.uploadContainerName
-    AZURE_BLOB_STORAGE_ENDPOINT             = module.storage.primary_endpoints
-    COSMOSDB_URL                            = module.cosmosdb.CosmosDBEndpointURL
-    COSMOSDB_LOG_DATABASE_NAME              = module.cosmosdb.CosmosDBLogDatabaseName
-    COSMOSDB_LOG_CONTAINER_NAME             = module.cosmosdb.CosmosDBLogContainerName
-    MAX_EMBEDDING_REQUEUE_COUNT             = 5
-    EMBEDDING_REQUEUE_BACKOFF               = 60
-    AZURE_OPENAI_SERVICE                    = var.useExistingAOAIService ? var.azureOpenAIServiceName : module.openaiServices[0].name
-    AZURE_OPENAI_ENDPOINT                   = var.useExistingAOAIService ? "https://${var.azureOpenAIServiceName}.${var.azure_openai_domain}/" : module.openaiServices[0].endpoint
-    AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME  = var.azureOpenAIEmbeddingDeploymentName
-    AZURE_SEARCH_INDEX                      = var.searchIndexName
-    AZURE_SEARCH_SERVICE                    = module.searchServices[0].name
-    TARGET_EMBEDDINGS_MODEL                 = var.useAzureOpenAIEmbeddings ? "azure-openai_${var.azureOpenAIEmbeddingDeploymentName}" : var.sentenceTransformersModelName
-    EMBEDDING_VECTOR_SIZE                   = var.useAzureOpenAIEmbeddings ? 1536 : var.sentenceTransformerEmbeddingVectorSize
-    AZURE_SEARCH_SERVICE_ENDPOINT           = module.searchServices[0].endpoint
-    WEBSITES_CONTAINER_START_TIME_LIMIT     = 600
+    EMBEDDINGS_QUEUE                       = var.embeddingsQueue
+    LOG_LEVEL                              = "DEBUG"
+    DEQUEUE_MESSAGE_BATCH_SIZE             = 1
+    AZURE_BLOB_STORAGE_ACCOUNT             = module.storage.name
+    AZURE_BLOB_STORAGE_CONTAINER           = var.contentContainerName
+    AZURE_BLOB_STORAGE_UPLOAD_CONTAINER    = var.uploadContainerName
+    AZURE_BLOB_STORAGE_ENDPOINT            = module.storage.primary_endpoints
+    COSMOSDB_URL                           = module.cosmosdb.CosmosDBEndpointURL
+    COSMOSDB_LOG_DATABASE_NAME             = module.cosmosdb.CosmosDBLogDatabaseName
+    COSMOSDB_LOG_CONTAINER_NAME            = module.cosmosdb.CosmosDBLogContainerName
+    MAX_EMBEDDING_REQUEUE_COUNT            = 5
+    EMBEDDING_REQUEUE_BACKOFF              = 60
+    AZURE_OPENAI_SERVICE                   = var.useExistingAOAIService ? var.azureOpenAIServiceName : module.openaiServices[0].name
+    AZURE_OPENAI_ENDPOINT                  = var.useExistingAOAIService ? "https://${var.azureOpenAIServiceName}.${var.azure_openai_domain}/" : module.openaiServices[0].endpoint
+    AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME = var.azureOpenAIEmbeddingDeploymentName
+    AZURE_SEARCH_INDEX                     = var.searchIndexName
+    AZURE_SEARCH_SERVICE                   = module.searchServices[0].name
+    TARGET_EMBEDDINGS_MODEL                = var.useAzureOpenAIEmbeddings ? "azure-openai_${var.azureOpenAIEmbeddingDeploymentName}" : var.sentenceTransformersModelName
+    EMBEDDING_VECTOR_SIZE                  = var.useAzureOpenAIEmbeddings ? 1536 : var.sentenceTransformerEmbeddingVectorSize
+    AZURE_SEARCH_SERVICE_ENDPOINT          = module.searchServices[0].endpoint
+    WEBSITES_CONTAINER_START_TIME_LIMIT    = 600
+    DISCONNECTED_AI                        = var.disconnectedAi
+
   }
-  depends_on                                = [ module.kvModule ]
+  depends_on = [module.kvModule]
 }
 
 # // The application frontend
 module "backend" {
-  count           = var.isContainerizedDeployment ? 0 : 1
-  source                              = "./core/host/webapp"
-  name                                = var.backendServiceName != "" ? var.backendServiceName : "infoasst-web-${random_string.random.result}"
-  plan_name                           = var.appServicePlanName != "" ? var.appServicePlanName : "infoasst-asp-${random_string.random.result}"
+  count     = var.containerizedAppServices ? 0 : 1
+  source    = "./core/host/webapp"
+  name      = var.backendServiceName != "" ? var.backendServiceName : "infoasst-web-${random_string.random.result}"
+  plan_name = var.appServicePlanName != "" ? var.appServicePlanName : "infoasst-asp-${random_string.random.result}"
   sku = {
-    tier                              = var.appServiceSkuTier
-    size                              = var.appServiceSkuSize
-    capacity                          = 1
+    tier     = var.appServiceSkuTier
+    size     = var.appServiceSkuSize
+    capacity = 1
   }
   kind                                = "linux"
   resourceGroupName                   = azurerm_resource_group.rg.name
   location                            = var.location
   tags                                = merge(local.tags, { "azd-service-name" = "backend" })
-  runtimeVersion                      = "3.10" 
+  runtimeVersion                      = "3.10"
   scmDoBuildDuringDeployment          = true
   managedIdentity                     = true
   appCommandLine                      = "gunicorn --workers 2 --worker-class uvicorn.workers.UvicornWorker app:app --timeout 600"
@@ -140,74 +144,79 @@ module "backend" {
   tenantId                            = var.tenantId
 
   appSettings = {
-    APPLICATIONINSIGHTS_CONNECTION_STRING   = module.logging.applicationInsightsConnectionString
-    AZURE_BLOB_STORAGE_ACCOUNT              = module.storage.name
-    AZURE_BLOB_STORAGE_ENDPOINT             = module.storage.primary_endpoints
-    AZURE_BLOB_STORAGE_CONTAINER            = var.contentContainerName
-    AZURE_BLOB_STORAGE_UPLOAD_CONTAINER     = var.uploadContainerName
-    AZURE_OPENAI_SERVICE                    = var.useExistingAOAIService ? var.azureOpenAIServiceName : module.openaiServices[0].name
-    AZURE_OPENAI_RESOURCE_GROUP             = var.useExistingAOAIService ? var.azureOpenAIResourceGroup : azurerm_resource_group.rg.name
-    AZURE_OPENAI_ENDPOINT                   = var.useExistingAOAIService ? "https://${var.azureOpenAIServiceName}.${var.azure_openai_domain}/" : module.openaiServices[0].endpoint
-    AZURE_OPENAI_AUTHORITY_HOST             = var.azure_openai_authority_host
-    AZURE_ARM_MANAGEMENT_API                = var.azure_arm_management_api
-    AZURE_SEARCH_INDEX                      = var.searchIndexName
-    AZURE_SEARCH_SERVICE                    = module.searchServices[0].name
-    AZURE_SEARCH_SERVICE_ENDPOINT           = module.searchServices[0].endpoint
-    AZURE_OPENAI_CHATGPT_DEPLOYMENT         = var.chatGptDeploymentName != "" ? var.chatGptDeploymentName : (var.chatGptModelName != "" ? var.chatGptModelName : "gpt-35-turbo-16k")
-    AZURE_OPENAI_CHATGPT_MODEL_NAME         = var.chatGptModelName
-    AZURE_OPENAI_CHATGPT_MODEL_VERSION      = var.chatGptModelVersion
-    USE_AZURE_OPENAI_EMBEDDINGS             = var.useAzureOpenAIEmbeddings
-    EMBEDDING_DEPLOYMENT_NAME               = var.useAzureOpenAIEmbeddings ? var.azureOpenAIEmbeddingDeploymentName : var.sentenceTransformersModelName
-    AZURE_OPENAI_EMBEDDINGS_MODEL_NAME      = var.azureOpenAIEmbeddingsModelName
-    AZURE_OPENAI_EMBEDDINGS_MODEL_VERSION   = var.azureOpenAIEmbeddingsModelVersion
-    APPINSIGHTS_INSTRUMENTATIONKEY          = module.logging.applicationInsightsInstrumentationKey
-    COSMOSDB_URL                            = module.cosmosdb.CosmosDBEndpointURL
-    COSMOSDB_LOG_DATABASE_NAME              = module.cosmosdb.CosmosDBLogDatabaseName
-    COSMOSDB_LOG_CONTAINER_NAME             = module.cosmosdb.CosmosDBLogContainerName
-    QUERY_TERM_LANGUAGE                     = var.queryTermLanguage
-    AZURE_SUBSCRIPTION_ID                   = data.azurerm_client_config.current.subscription_id
-    CHAT_WARNING_BANNER_TEXT                = var.chatWarningBannerText
-    TARGET_EMBEDDINGS_MODEL                 = var.useAzureOpenAIEmbeddings ? "azure-openai_${var.azureOpenAIEmbeddingDeploymentName}" : var.sentenceTransformersModelName
-    ENRICHMENT_APPSERVICE_URL               = module.enrichmentApp[0].uri
-    ENRICHMENT_ENDPOINT                     = module.cognitiveServices.cognitiveServiceEndpoint
-    APPLICATION_TITLE                       = var.applicationtitle == "" ? "Information Assistant, built with Azure OpenAI" : var.applicationtitle
-    AZURE_AI_TRANSLATION_DOMAIN             = var.azure_ai_translation_domain
-    USE_SEMANTIC_RERANKER                   = var.use_semantic_reranker
-    BING_SEARCH_ENDPOINT                    = var.enableWebChat ? module.bingSearch.endpoint : ""
-    ENABLE_WEB_CHAT                         = var.enableWebChat
-    ENABLE_BING_SAFE_SEARCH                 = var.enableBingSafeSearch
-    ENABLE_UNGROUNDED_CHAT                  = var.enableUngroundedChat
-    ENABLE_MATH_ASSISTANT                   = var.enableMathAssitant
-    ENABLE_TABULAR_DATA_ASSISTANT           = var.enableTabularDataAssistant
-    ENABLE_MULTIMEDIA                       = var.enableMultimedia
-    MAX_CSV_FILE_SIZE                       = var.maxCsvFileSize
+    APPLICATIONINSIGHTS_CONNECTION_STRING = module.logging.applicationInsightsConnectionString
+    AZURE_BLOB_STORAGE_ACCOUNT            = module.storage.name
+    AZURE_BLOB_STORAGE_ENDPOINT           = module.storage.primary_endpoints
+    AZURE_BLOB_STORAGE_CONTAINER          = var.contentContainerName
+    AZURE_BLOB_STORAGE_UPLOAD_CONTAINER   = var.uploadContainerName
+    AZURE_OPENAI_SERVICE                  = var.useExistingAOAIService ? var.azureOpenAIServiceName : module.openaiServices[0].name
+    AZURE_OPENAI_RESOURCE_GROUP           = var.useExistingAOAIService ? var.azureOpenAIResourceGroup : azurerm_resource_group.rg.name
+    AZURE_OPENAI_ENDPOINT                 = var.useExistingAOAIService ? "https://${var.azureOpenAIServiceName}.${var.azure_openai_domain}/" : module.openaiServices[0].endpoint
+    AZURE_OPENAI_AUTHORITY_HOST           = var.azure_openai_authority_host
+    AZURE_ARM_MANAGEMENT_API              = var.azure_arm_management_api
+    AZURE_SEARCH_INDEX                    = var.searchIndexName
+    AZURE_SEARCH_SERVICE                  = module.searchServices[0].name
+    AZURE_SEARCH_SERVICE_ENDPOINT         = module.searchServices[0].endpoint
+    AZURE_OPENAI_CHATGPT_DEPLOYMENT       = var.chatGptDeploymentName != "" ? var.chatGptDeploymentName : (var.chatGptModelName != "" ? var.chatGptModelName : "gpt-35-turbo-16k")
+    AZURE_OPENAI_CHATGPT_MODEL_NAME       = var.chatGptModelName
+    AZURE_OPENAI_CHATGPT_MODEL_VERSION    = var.chatGptModelVersion
+    USE_AZURE_OPENAI_EMBEDDINGS           = var.useAzureOpenAIEmbeddings
+    EMBEDDING_DEPLOYMENT_NAME             = var.useAzureOpenAIEmbeddings ? var.azureOpenAIEmbeddingDeploymentName : var.sentenceTransformersModelName
+    AZURE_OPENAI_EMBEDDINGS_MODEL_NAME    = var.azureOpenAIEmbeddingsModelName
+    AZURE_OPENAI_EMBEDDINGS_MODEL_VERSION = var.azureOpenAIEmbeddingsModelVersion
+    APPINSIGHTS_INSTRUMENTATIONKEY        = module.logging.applicationInsightsInstrumentationKey
+    COSMOSDB_URL                          = module.cosmosdb.CosmosDBEndpointURL
+    COSMOSDB_LOG_DATABASE_NAME            = module.cosmosdb.CosmosDBLogDatabaseName
+    COSMOSDB_LOG_CONTAINER_NAME           = module.cosmosdb.CosmosDBLogContainerName
+    QUERY_TERM_LANGUAGE                   = var.queryTermLanguage
+    AZURE_SUBSCRIPTION_ID                 = data.azurerm_client_config.current.subscription_id
+    CHAT_WARNING_BANNER_TEXT              = var.chatWarningBannerText
+    TARGET_EMBEDDINGS_MODEL               = var.useAzureOpenAIEmbeddings ? "azure-openai_${var.azureOpenAIEmbeddingDeploymentName}" : var.sentenceTransformersModelName
+    ENRICHMENT_APPSERVICE_URL             = module.enrichmentApp[0].uri
+    ENRICHMENT_ENDPOINT                   = module.cognitiveServices.cognitiveServiceEndpoint
+    APPLICATION_TITLE                     = var.applicationtitle == "" ? "Information Assistant, built with Azure OpenAI" : var.applicationtitle
+    AZURE_AI_TRANSLATION_DOMAIN           = var.azure_ai_translation_domain
+    USE_SEMANTIC_RERANKER                 = var.use_semantic_reranker
+    BING_SEARCH_ENDPOINT                  = var.enableWebChat ? module.bingSearch.endpoint : ""
+    ENABLE_WEB_CHAT                       = var.enableWebChat
+    ENABLE_BING_SAFE_SEARCH               = var.enableBingSafeSearch
+    ENABLE_UNGROUNDED_CHAT                = var.enableUngroundedChat
+    ENABLE_MATH_ASSISTANT                 = var.enableMathAssitant
+    ENABLE_TABULAR_DATA_ASSISTANT         = var.enableTabularDataAssistant
+    ENABLE_MULTIMEDIA                     = var.enableMultimedia
+    MAX_CSV_FILE_SIZE                     = var.maxCsvFileSize
+    DISCONNECTED_AI                       = var.disconnectedAi
+    ENTRA_ID_CLIENT_ID                    = module.entraObjects.azure_ad_web_app_client_id
+    ENTRA_ID_CLIENT_SECRET                = module.entraObjects.azure_ad_web_app_secret
+    AZURE_TENANT_ID                       = var.tenantId
+    APP_DOMAIN                            = var.containerizedAppServices ? "https://infoasst.${random_string.random.result}.${var.topLevelDomain}" : "https://infoasst-web-${random_string.random.result}.${var.azure_websites_domain}"
   }
 
   aadClientId = module.entraObjects.azure_ad_web_app_client_id
-  depends_on = [ module.kvModule ]
+  depends_on  = [module.kvModule]
 }
 
 module "openaiServices" {
-  source = "./core/ai/openaiservices"
-  name     = var.openAIServiceName != "" ? var.openAIServiceName : "infoasst-aoai-${random_string.random.result}"
-  location = var.location
-  tags     = local.tags
-  resourceGroupName = azurerm_resource_group.rg.name
-  keyVaultId = module.kvModule.keyVaultId
-  openaiServiceKey = var.azureOpenAIServiceKey
+  source                 = "./core/ai/openaiservices"
+  name                   = var.openAIServiceName != "" ? var.openAIServiceName : "infoasst-aoai-${random_string.random.result}"
+  location               = var.location
+  tags                   = local.tags
+  resourceGroupName      = azurerm_resource_group.rg.name
+  keyVaultId             = module.kvModule.keyVaultId
+  openaiServiceKey       = var.azureOpenAIServiceKey
   useExistingAOAIService = var.useExistingAOAIService
 
   deployments = concat(
-    var.isContainerizedDeployment ? [] : [
+    var.disconnectedAi ? [] : [
       {
         name = var.chatGptDeploymentName != "" ? var.chatGptDeploymentName : (var.chatGptModelName != "" ? var.chatGptModelName : "gpt-35-turbo-16k")
         model = {
-          format = "OpenAI"
-          name = var.chatGptModelName != "" ? var.chatGptModelName : "gpt-35-turbo-16k"
+          format  = "OpenAI"
+          name    = var.chatGptModelName != "" ? var.chatGptModelName : "gpt-35-turbo-16k"
           version = var.chatGptModelVersion != "" ? var.chatGptModelVersion : "0613"
         }
-        sku_name = "Standard"
-        sku_capacity = var.chatGptDeploymentCapacity
+        sku_name        = "Standard"
+        sku_capacity    = var.chatGptDeploymentCapacity
         rai_policy_name = "Microsoft.Default"
       }
     ],
@@ -215,12 +224,12 @@ module "openaiServices" {
       {
         name = var.azureOpenAIEmbeddingDeploymentName != "" ? var.azureOpenAIEmbeddingDeploymentName : "text-embedding-ada-002"
         model = {
-          format = "OpenAI"
-          name = var.azureOpenAIEmbeddingsModelName != "" ? var.azureOpenAIEmbeddingsModelName : "text-embedding-ada-002"
+          format  = "OpenAI"
+          name    = var.azureOpenAIEmbeddingsModelName != "" ? var.azureOpenAIEmbeddingsModelName : "text-embedding-ada-002"
           version = "2"
         }
-        sku_name = "Standard"
-        sku_capacity = var.embeddingsDeploymentCapacity
+        sku_name        = "Standard"
+        sku_capacity    = var.embeddingsDeploymentCapacity
         rai_policy_name = "Microsoft.Default"
       }
     ]
@@ -230,26 +239,26 @@ module "openaiServices" {
 module "formrecognizer" {
   source = "./core/ai/docintelligence"
 
-  name     = "infoasst-fr-${random_string.random.result}"
-  location = var.location
-  tags     = local.tags
+  name                = "infoasst-fr-${random_string.random.result}"
+  location            = var.location
+  tags                = local.tags
   customSubDomainName = "infoasst-fr-${random_string.random.result}"
-  resourceGroupName = azurerm_resource_group.rg.name
-  keyVaultId = module.kvModule.keyVaultId 
+  resourceGroupName   = azurerm_resource_group.rg.name
+  keyVaultId          = module.kvModule.keyVaultId
 }
 
 module "cognitiveServices" {
   source = "./core/ai/cogServices"
 
-  name     = "infoasst-enrichment-cog-${random_string.random.result}"
-  location = var.location 
-  tags     = local.tags
-  keyVaultId = module.kvModule.keyVaultId 
+  name              = "infoasst-enrichment-cog-${random_string.random.result}"
+  location          = var.location
+  tags              = local.tags
+  keyVaultId        = module.kvModule.keyVaultId
   resourceGroupName = azurerm_resource_group.rg.name
 }
 
 module "searchServices" {
-  count            = var.isContainerizedDeployment ? 0 : 1
+  count  = var.disconnectedAi ? 0 : 1
   source = "./core/search"
 
   name     = var.searchServicesName != "" ? var.searchServicesName : "infoasst-search-${random_string.random.result}"
@@ -257,39 +266,38 @@ module "searchServices" {
   tags     = local.tags
   # aad_auth_failure_mode = "http401WithBearerChallenge"
   # sku_name = var.searchServicesSkuName
-  semanticSearch = var.use_semantic_reranker ? "free" : null
-  resourceGroupName = azurerm_resource_group.rg.name
-  keyVaultId = module.kvModule.keyVaultId
+  semanticSearch      = var.use_semantic_reranker ? "free" : null
+  resourceGroupName   = azurerm_resource_group.rg.name
+  keyVaultId          = module.kvModule.keyVaultId
   azure_search_domain = var.azure_search_domain
 }
 
 module "cosmosdb" {
   source = "./core/db"
 
-  name                = "infoasst-cosmos-${random_string.random.result}"
-  location            = var.location
-  tags                = local.tags
+  name              = "infoasst-cosmos-${random_string.random.result}"
+  location          = var.location
+  tags              = local.tags
   logDatabaseName   = "statusdb"
   logContainerName  = "statuscontainer"
   resourceGroupName = azurerm_resource_group.rg.name
-  keyVaultId        = module.kvModule.keyVaultId  
+  keyVaultId        = module.kvModule.keyVaultId
 }
 
 # // Function App 
-module "functions" { 
-  // count           = var.isContainerizedDeployment ? 0 : 1 using one block with specific logic instead of breaking up into two blocks
+module "functions" {
   source = "./core/host/functions"
 
-  name                                  = var.functionsAppName != "" ? var.functionsAppName : "infoasst-func-${random_string.random.result}"
-  location                              = var.location
-  tags                                  = local.tags
-  keyVaultUri                           = module.kvModule.keyVaultUri
-  keyVaultName                          = module.kvModule.keyVaultName 
-  plan_name                             = var.appServicePlanName != "" ? var.appServicePlanName : "infoasst-func-asp-${random_string.random.result}"
-  sku                                   = {
-    size                                = var.functionsAppSkuSize
-    tier                                = var.functionsAppSkuTier
-    capacity                            = 2
+  name         = var.functionsAppName != "" ? var.functionsAppName : "infoasst-func-${random_string.random.result}"
+  location     = var.location
+  tags         = local.tags
+  keyVaultUri  = module.kvModule.keyVaultUri
+  keyVaultName = module.kvModule.keyVaultName
+  plan_name    = var.appServicePlanName != "" ? var.appServicePlanName : "infoasst-func-asp-${random_string.random.result}"
+  sku = {
+    size     = var.functionsAppSkuSize
+    tier     = var.functionsAppSkuTier
+    capacity = 2
   }
   kind                                  = "linux"
   runtime                               = "python"
@@ -299,8 +307,8 @@ module "functions" {
   blobStorageAccountName                = module.storage.name
   blobStorageAccountEndpoint            = module.storage.primary_endpoints
   blobStorageAccountOutputContainerName = var.contentContainerName
-  blobStorageAccountUploadContainerName = var.uploadContainerName 
-  blobStorageAccountLogContainerName    = var.functionLogsContainerName 
+  blobStorageAccountUploadContainerName = var.uploadContainerName
+  blobStorageAccountLogContainerName    = var.functionLogsContainerName
   formRecognizerEndpoint                = module.formrecognizer.formRecognizerAccountEndpoint
   CosmosDBEndpointURL                   = module.cosmosdb.CosmosDBEndpointURL
   CosmosDBLogDatabaseName               = module.cosmosdb.CosmosDBLogDatabaseName
@@ -331,14 +339,15 @@ module "functions" {
   enableDevCode                         = var.enableDevCode
   EMBEDDINGS_QUEUE                      = var.embeddingsQueue
   azureSearchIndex                      = var.searchIndexName
-  azureSearchServiceEndpoint            = var.isContainerizedDeployment ? "" : module.searchServices[0].endpoint
+  azureSearchServiceEndpoint            = var.disconnectedAi ? "" : module.searchServices[0].endpoint
   endpointSuffix                        = var.azure_storage_domain
   azure_ai_text_analytics_domain        = var.azure_ai_text_analytics_domain
   azure_ai_translation_domain           = var.azure_ai_translation_domain
-  isContainerizedDeployment             = var.isContainerizedDeployment
-  acrEndpoint                           = var.isContainerizedDeployment ? module.acr[0].endpoint : ""
-  imageName                             = var.isContainerizedDeployment ? "function" : ""
-  imageTag                              = var.isContainerizedDeployment ? "latest": ""
+  containerizedAppServices              = var.containerizedAppServices
+  disconnectedAi                        = var.disconnectedAi
+  acrEndpoint                           = var.containerizedAppServices ? module.acr[0].endpoint : ""
+  imageName                             = var.containerizedAppServices ? "function" : ""
+  imageTag                              = var.containerizedAppServices ? "latest" : ""
 
   depends_on = [
     module.acr,
@@ -349,16 +358,16 @@ module "functions" {
 }
 
 module "sharepoint" {
-  count                               = var.enableSharePointConnector ? 1 : 0
-  source                              = "./core/sharepoint"
-  location                            = azurerm_resource_group.rg.location
-  resource_group_name                 = azurerm_resource_group.rg.name
-  resource_group_id                   = azurerm_resource_group.rg.id
-  subscription_id                     = data.azurerm_client_config.current.subscription_id
-  storage_account_name                = module.storage.name
-  storage_access_key                  = module.storage.storage_account_access_key
-  random_string                       = random_string.random.result
-  tags                                = local.tags
+  count                = var.enableSharePointConnector ? 1 : 0
+  source               = "./core/sharepoint"
+  location             = azurerm_resource_group.rg.location
+  resource_group_name  = azurerm_resource_group.rg.name
+  resource_group_id    = azurerm_resource_group.rg.id
+  subscription_id      = data.azurerm_client_config.current.subscription_id
+  storage_account_name = module.storage.name
+  storage_access_key   = module.storage.storage_account_access_key
+  random_string        = random_string.random.result
+  tags                 = local.tags
 
   depends_on = [
     module.storage
@@ -380,11 +389,11 @@ module "video_indexer" {
 
 // USER ROLES
 module "userRoles" {
-  source = "./core/security/role"
+  source   = "./core/security/role"
   for_each = { for role in local.selected_roles : role => { role_definition_id = local.azure_roles[role] } }
 
   scope            = azurerm_resource_group.rg.id
-  principalId      = data.azurerm_client_config.current.object_id 
+  principalId      = data.azurerm_client_config.current.object_id
   roleDefinitionId = each.value.role_definition_id
   principalType    = var.isInAutomation ? "ServicePrincipal" : "User"
   subscriptionId   = data.azurerm_client_config.current.subscription_id
@@ -398,11 +407,11 @@ data "azurerm_resource_group" "existing" {
 
 # # // SYSTEM IDENTITY ROLES
 module "openAiRoleBackend" {
-  count            = var.isContainerizedDeployment ? 0 : 1
+  count  = var.disconnectedAi ? 0 : 1
   source = "./core/security/role"
 
   scope            = var.useExistingAOAIService ? data.azurerm_resource_group.existing[0].id : azurerm_resource_group.rg.id
-  principalId      = module.backend[0].identityPrincipalId
+  principalId      = var.containerizedAppServices ? module.aks[0].kubletId : module.backend[0].identityPrincipalId
   roleDefinitionId = local.azure_roles.CognitiveServicesOpenAIUser
   principalType    = "ServicePrincipal"
   subscriptionId   = data.azurerm_client_config.current.subscription_id
@@ -410,7 +419,7 @@ module "openAiRoleBackend" {
 }
 
 module "storageRoleBackend" {
-  count            = var.isContainerizedDeployment ? 0 : 1
+  count  = var.containerizedAppServices ? 0 : 1
   source = "./core/security/role"
 
   scope            = azurerm_resource_group.rg.id
@@ -422,7 +431,7 @@ module "storageRoleBackend" {
 }
 
 module "searchRoleBackend" {
-  count            = var.isContainerizedDeployment ? 0 : 1
+  count  = var.containerizedAppServices ? 0 : 1
   source = "./core/security/role"
 
   scope            = azurerm_resource_group.rg.id
@@ -445,14 +454,14 @@ module "storageRoleFunc" {
 }
 
 module "aviRoleBackend" {
-  source            = "./core/security/role"
-  count             = var.enableMultimedia ? 1 : 0
-  scope             = module.video_indexer[0].vi_id
-  principalId       = module.backend[0].identityPrincipalId
-  roleDefinitionId  = local.azure_roles.Contributor
-  principalType     = "ServicePrincipal"
-  subscriptionId    = data.azurerm_client_config.current.subscription_id
-  resourceGroupId   = azurerm_resource_group.rg.id 
+  source           = "./core/security/role"
+  count            = var.enableMultimedia ? 1 : 0
+  scope            = module.video_indexer[0].vi_id
+  principalId      = module.backend[0].identityPrincipalId
+  roleDefinitionId = local.azure_roles.Contributor
+  principalType    = "ServicePrincipal"
+  subscriptionId   = data.azurerm_client_config.current.subscription_id
+  resourceGroupId  = azurerm_resource_group.rg.id
 }
 
 # // MANAGEMENT SERVICE PRINCIPAL ROLES
@@ -460,11 +469,11 @@ module "openAiRoleMgmt" {
   source = "./core/security/role"
   # If leveraging an existing Azure OpenAI service, only make this assignment if not under automation.
   # When under automation and using an existing Azure OpenAI service, this will result in a duplicate assignment error.
-  count = var.useExistingAOAIService ? var.isInAutomation ? 0 : 1 : 1
-  scope = var.useExistingAOAIService ? data.azurerm_resource_group.existing[0].id : azurerm_resource_group.rg.id
-  principalId     = module.entraObjects.azure_ad_mgmt_sp_id
+  count            = var.useExistingAOAIService ? var.isInAutomation ? 0 : 1 : 1
+  scope            = var.useExistingAOAIService ? data.azurerm_resource_group.existing[0].id : azurerm_resource_group.rg.id
+  principalId      = module.entraObjects.azure_ad_mgmt_sp_id
   roleDefinitionId = local.azure_roles.CognitiveServicesOpenAIUser
-  principalType   = "ServicePrincipal"
+  principalType    = "ServicePrincipal"
   subscriptionId   = data.azurerm_client_config.current.subscription_id
   resourceGroupId  = azurerm_resource_group.rg.id
 }
@@ -474,31 +483,34 @@ module "azMonitor" {
   logAnalyticsName  = module.logging.logAnalyticsName
   location          = var.location
   logWorkbookName   = "infoasst-lw-${random_string.random.result}"
-  resourceGroupName = azurerm_resource_group.rg.name 
+  resourceGroupName = azurerm_resource_group.rg.name
   componentResource = "/subscriptions/${var.subscriptionId}/resourceGroups/${azurerm_resource_group.rg.name}/providers/Microsoft.OperationalInsights/workspaces/${module.logging.logAnalyticsName}"
 }
 
 module "kvModule" {
-  source            = "./core/security/keyvault" 
-  name              = "infoasst-kv-${random_string.random.result}"
-  location          = var.location
-  kvAccessObjectId  = data.azurerm_client_config.current.object_id 
-  spClientSecret    = module.entraObjects.azure_ad_mgmt_app_secret 
-  subscriptionId    = var.subscriptionId
-  resourceGroupId   = azurerm_resource_group.rg.id 
-  resourceGroupName = azurerm_resource_group.rg.name
-  tags              = local.tags
+  source                   = "./core/security/keyvault"
+  name                     = "infoasst-kv-${random_string.random.result}"
+  location                 = var.location
+  kvAccessObjectId         = data.azurerm_client_config.current.object_id
+  spClientSecret           = module.entraObjects.azure_ad_mgmt_app_secret
+  subscriptionId           = var.subscriptionId
+  resourceGroupId          = azurerm_resource_group.rg.id
+  resourceGroupName        = azurerm_resource_group.rg.name
+  tags                     = local.tags
+  containerizedAppServices = var.containerizedAppServices
+  sharedKvName             = var.sharedKvName
+  sharedKvResourceGroup    = var.sharedKvResourceGroup
 }
 
 module "bingSearch" {
-  source                        = "./core/ai/bingSearch"
-  name                          = "infoasst-bing-${random_string.random.result}"
-  resourceGroupName             = azurerm_resource_group.rg.name
-  tags                          = local.tags
-  sku                           = "S1" //supported SKUs can be found at https://www.microsoft.com/en-us/bing/apis/pricing
-  arm_template_schema_mgmt_api  = var.arm_template_schema_mgmt_api
-  keyVaultId                    = module.kvModule.keyVaultId
-  enableWebChat                 = var.enableWebChat
+  source                       = "./core/ai/bingSearch"
+  name                         = "infoasst-bing-${random_string.random.result}"
+  resourceGroupName            = azurerm_resource_group.rg.name
+  tags                         = local.tags
+  sku                          = "S1" //supported SKUs can be found at https://www.microsoft.com/en-us/bing/apis/pricing
+  arm_template_schema_mgmt_api = var.arm_template_schema_mgmt_api
+  keyVaultId                   = module.kvModule.keyVaultId
+  enableWebChat                = var.enableWebChat
 }
 
 // DEPLOYMENT OF AZURE CUSTOMER ATTRIBUTION TAG
@@ -524,23 +536,23 @@ data "azurerm_container_registry" "existing" {
 }
 
 module "aks" {
-  count           = var.isContainerizedDeployment ? 1 : 0
-  source          = "./core/compute"
-  aksIdentityType = var.aksIdentityType
-  aksSkuTier      = var.aksSkuTier
-  aksSystemVmSize = var.aksSystemVmSize
-  aksUserVmSize   = var.aksUserVmSize
-  clusterName     = "infoasst-${local.abbr.containerServiceManagedClusters}${random_string.random.result}"
-  keyVaultName    = module.kvModule.keyVaultName
-  keyVaultId      = module.kvModule.keyVaultId
-  location        = var.location
+  count             = var.containerizedAppServices ? 1 : 0
+  source            = "./core/compute"
+  aksIdentityType   = var.aksIdentityType
+  aksSkuTier        = var.aksSkuTier
+  aksSystemVmSize   = var.aksSystemVmSize
+  aksUserVmSize     = var.aksUserVmSize
+  clusterName       = "infoasst-${local.abbr.containerServiceManagedClusters}${random_string.random.result}"
+  keyVaultName      = module.kvModule.keyVaultName
+  keyVaultId        = module.kvModule.keyVaultId
+  location          = var.location
   resourceGroupName = azurerm_resource_group.rg.name
-  tenantId        = var.tenantId
-  depends_on      = [module.kvModule]
+  tenantId          = var.tenantId
+  depends_on        = [module.kvModule]
 }
 
 module "acr" {
-  count             = var.isContainerizedDeployment ? 1 : 0
+  count             = var.containerizedAppServices ? 1 : 0
   source            = "./core/storage/acr"
   name              = "infoasst${local.abbr.containerRegistryRegistries}${random_string.random.result}"
   acrSku            = var.acrSku
@@ -552,37 +564,44 @@ module "acr" {
 }
 
 module "ACRRoleAssignmentFunctions" {
-  count              = var.isContainerizedDeployment ? 1 : 0
-  source             = "./core/security/role"
-  scope              = var.useExistingAcr ? data.azurerm_container_registry.existing.id : azurerm_resource_group.rg.id
-  principalId        = module.functions.function_app_identity_principal_id
-  principalType      = "ServicePrincipal" # Default is set in the module, change if necessary
-  roleDefinitionId   = local.azure_roles.AcrPull
-  subscriptionId     = var.subscriptionId
-  resourceGroupId    = azurerm_resource_group.rg.id 
-  depends_on         = [module.functions]
+  count            = var.containerizedAppServices ? 1 : 0
+  source           = "./core/security/role"
+  scope            = var.useExistingAcr ? data.azurerm_container_registry.existing.id : azurerm_resource_group.rg.id
+  principalId      = module.functions.function_app_identity_principal_id
+  principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
+  roleDefinitionId = local.azure_roles.AcrPull
+  subscriptionId   = var.subscriptionId
+  resourceGroupId  = azurerm_resource_group.rg.id
+  depends_on       = [module.functions]
 }
 
 module "ACRRoleAssignmentKubernetes" {
-  count              = var.isContainerizedDeployment ? 1 : 0
-  source             = "./core/security/role"
-  scope              = var.useExistingAcr ? data.azurerm_container_registry.existing.id : azurerm_resource_group.rg.id
-  principalId        = module.aks[0].kubletId
-  principalType      = "ServicePrincipal" # Default is set in the module, change if necessary
-  roleDefinitionId   = local.azure_roles.AcrPull
-  subscriptionId     = var.subscriptionId
-  resourceGroupId    = azurerm_resource_group.rg.id 
-  depends_on         = [module.aks]
+  count            = var.containerizedAppServices ? 1 : 0
+  source           = "./core/security/role"
+  scope            = var.useExistingAcr ? data.azurerm_container_registry.existing.id : azurerm_resource_group.rg.id
+  principalId      = module.aks[0].kubletId
+  principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
+  roleDefinitionId = local.azure_roles.AcrPull
+  subscriptionId   = var.subscriptionId
+  resourceGroupId  = azurerm_resource_group.rg.id
+  depends_on       = [module.aks]
 }
 
 module "NetworkContributorRole" {
-  count              = var.isContainerizedDeployment ? 1 : 0
-  source             = "./core/security/role"
-  scope              = azurerm_resource_group.rg.id
-  principalId        = module.aks[0].aksPrincipalId
-  principalType      = "ServicePrincipal" # Default is set in the module, change if necessary
-  roleDefinitionId   = local.azure_roles.NetworkContributor
-  subscriptionId     = var.subscriptionId
-  resourceGroupId    = azurerm_resource_group.rg.id 
-  depends_on         = [module.aks]
+  count            = var.containerizedAppServices ? 1 : 0
+  source           = "./core/security/role"
+  scope            = azurerm_resource_group.rg.id
+  principalId      = module.aks[0].aksPrincipalId
+  principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
+  roleDefinitionId = local.azure_roles.NetworkContributor
+  subscriptionId   = var.subscriptionId
+  resourceGroupId  = azurerm_resource_group.rg.id
+  depends_on       = [module.aks]
+}
+
+module "PublicIP" {
+  source            = "./core/publicip"
+  name              = "infoasst-ip"
+  location          = var.location
+  resourceGroupName = azurerm_resource_group.rg.name
 }
