@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{.Release.Namespace}}
+  name: istio-operator{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
+  annotations:
+    checkov.io/skip1: CKV_K8S_8=Istio implements liveness probes via either command or HTTP approaches and requires additional configuration (https://istio.io/latest/docs/ops/configuration/mesh/app-health-check/)
+    checkov.io/skip2: CKV_K8S_9=Istio implements readiness probes via either command or HTTP approaches and requires additional configuration (https://istio.io/latest/docs/ops/configuration/mesh/app-health-check/)
+    checkov.io/skip3: CKV_K8S_40=Istio requires runAsUser and runAsGroup to be set to '1337' for all components or it will not work. Thank the Google engineers for that one.
+    checkov.io/skip4: CKV_K8S_38=Istio deployment fails when this option is set. PBI 72217. Skipping for now.
+    checkov.io/skip5: CKV_K8S_21=The default namespace is not used.
+spec:
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.deploymentHistory }}
+  selector:
+    matchLabels:
+      name: istio-operator
+  template:
+    metadata:
+      labels:
+        name: istio-operator
+        {{- range $key, $val := .Values.podLabels }}
+        {{ $key }}: "{{ $val }}"
+        {{- end }}
+    {{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+    {{- end }}
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: istio-operator{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
+      containers:
+        - name: istio-operator
+          image: {{ .Values.repository }}{{- if .Values.digest }}@{{ .Values.digest }}{{- else }}:{{ .Values.tag }}{{- end}}
+          command:
+          - operator
+          - server
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1337
+            runAsUser: 1337
+            runAsNonRoot: true
+{{- if .Values.operator.seccompProfile }}
+            seccompProfile:
+{{ toYaml .Values.operator.seccompProfile | trim | indent 14 }}
+{{- end }}
+{{- if .Values.imagePullPolicy }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+{{- end }}
+          resources:
+{{ toYaml .Values.operator.resources | trim | indent 12 }}
+          env:
+            - name: WATCH_NAMESPACE
+              value: {{.Values.watchedNamespaces | quote}}
+            - name: LEADER_ELECTION_NAMESPACE
+              value: {{.Release.Namespace | quote}}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: {{.Release.Namespace | quote}}
+            - name: WAIT_FOR_RESOURCES_TIMEOUT
+              value: {{.Values.waitForResourcesTimeout | quote}}
+            - name: REVISION
+              value: {{.Values.revision | quote}}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---

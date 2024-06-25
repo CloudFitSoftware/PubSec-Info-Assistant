@@ -7,7 +7,7 @@ variable "location" {
 }
 
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }
 
@@ -21,23 +21,23 @@ variable "sku" {
 }
 
 variable "authOptions" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }
 
 variable "semanticSearch" {
-  type = string
+  type    = string
   default = "disabled"
 }
 
 variable "resourceGroupName" {
-  type    = string
+  type = string
 }
 
-variable "keyVaultId" { 
+variable "keyVaultId" {
   type = string
 }
 
 variable "azure_search_domain" {
-  type = string  
+  type = string
 }

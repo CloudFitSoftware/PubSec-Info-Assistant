@@ -1,0 +1,18 @@
+#This is the email that letsencrypt will send notices to. If there is no email then the letsEncrypt issuers will not be created
+letsEncryptEmail: me@karch.io
+
+# for issuer use letsencrypt-prod, letsencrypt-staging, self-signed, or self-supplied
+# letsencrypt-prod gives you a correct prod-ready signed cert (with some dns setting and internet access)
+# letsencrypt-staging gives you a self-signed cert validating that you are ready for using prod
+# self-signed gives you a self-signed cert courtesy of cert manager that works offline
+# self-supplied does nothing and expects you to place the correct cert secrets in the correct namespaces
+issuer: letsencrypt-staging
+
+# this is where you put in the dns names you want for the services my example is in the comments
+FQDNSuffix: infoasst.cloudfit.software #.rd10123132.cloudfit.software
+ANSuffix: #-test.cloudfitonline.com
+
+# acct url for default letsencrypt_idkey: https://acme-v02.api.letsencrypt.org/acme/acct/547762256
+# the below is a functional default for R&D testing. You should change this (or blank it) for production use. If someone has this key they can revoke your certs, if they know this was the account tha provisioned them.
+# in the future we will likely have one of these for r&d and perhaps the same one for Test, but then a seperate one for prod
+letsencrypt_idkey: 

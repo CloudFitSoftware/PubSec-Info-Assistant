@@ -9,10 +9,10 @@ resource "azurerm_resource_group_template_deployment" "sharepoint_logicapp" {
     "workflow_name"        = { value = "infoasst-sharepointonline-${var.random_string}" },
     "location"             = { value = var.location },
     "storage_account_name" = { value = var.storage_account_name },
-    "storage_account_key"   = { value = var.storage_access_key }
+    "storage_account_key"  = { value = var.storage_access_key }
   })
   # Assuming you have an ARM template named logic_app_template.json in the same directory as your main.tf file
-  template_content    = file(local.logic_app_filepath)
+  template_content = file(local.logic_app_filepath)
 
-  deployment_mode     = "Incremental"
+  deployment_mode = "Incremental"
 }

@@ -54,7 +54,10 @@ from azure.cosmos import CosmosClient
 from shared_code.tags_helper import TagsHelper
 from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
 import weaviate
-
+from fastapi import FastAPI, Depends
+from auth import router as auth_router, get_current_user
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 # === ENV Setup ===
 
 str_to_bool = {'true': True, 'false': False}
@@ -73,7 +76,7 @@ AZURE_OPENAI_SERVICE = os.environ.get("AZURE_OPENAI_SERVICE") or "myopenai"
 AZURE_OPENAI_RESOURCE_GROUP = os.environ.get("AZURE_OPENAI_RESOURCE_GROUP") or ""
 AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT") or ""
 AZURE_OPENAI_AUTHORITY_HOST = os.environ.get("AZURE_OPENAI_AUTHORITY_HOST") or "AzureCloud"
-AZURE_OPENAI_CHATGPT_DEPLOYMENT = (os.environ.get("AZURE_OPENAI_CHATGPT_DEPLOYMENT") or "gpt-35-turbo-16k")
+AZURE_OPENAI_CHATGPT_DEPLOYMENT = (os.environ.get("AZURE_OPENAI_CHATGPT_DEPLOYMENT") or "gpt-4")
 AZURE_OPENAI_CHATGPT_MODEL_NAME = ( os.environ.get("AZURE_OPENAI_CHATGPT_MODEL_NAME") or "")
 AZURE_OPENAI_CHATGPT_MODEL_VERSION = ( os.environ.get("AZURE_OPENAI_CHATGPT_MODEL_VERSION") or "")
 USE_AZURE_OPENAI_EMBEDDINGS = str_to_bool.get(os.environ.get("USE_AZURE_OPENAI_EMBEDDINGS", "").lower()) or False
@@ -81,7 +84,7 @@ EMBEDDING_DEPLOYMENT_NAME = ( os.environ.get("EMBEDDING_DEPLOYMENT_NAME") or "")
 AZURE_OPENAI_EMBEDDINGS_MODEL_NAME = ( os.environ.get("AZURE_OPENAI_EMBEDDINGS_MODEL_NAME") or "")
 AZURE_OPENAI_EMBEDDINGS_VERSION = ( os.environ.get("AZURE_OPENAI_EMBEDDINGS_VERSION") or "")
 AZURE_SUBSCRIPTION_ID = os.environ.get("AZURE_SUBSCRIPTION_ID")
-AZURE_ARM_MANAGEMENT_API = os.environ.get("AZURE_ARM_MANAGEMENT_API") or "https://management.azure.com"
+AZURE_ARM_MANAGEMENT_API = os.environ.get("AZURE_ARM_MANAGEMENT_API") or "https://management.azure.us"
 CHAT_WARNING_BANNER_TEXT = os.environ.get("CHAT_WARNING_BANNER_TEXT") or ""
 APPLICATION_TITLE = os.environ.get("APPLICATION_TITLE") or "Information Assistant, built with Azure OpenAI"
 
@@ -97,7 +100,7 @@ COSMOSDB_LOG_CONTAINER_NAME = os.environ.get("COSMOSDB_LOG_CONTAINER_NAME") or "
 QUERY_TERM_LANGUAGE = os.environ.get("QUERY_TERM_LANGUAGE") or "English"
 
 TARGET_EMBEDDINGS_MODEL = os.environ.get("TARGET_EMBEDDINGS_MODEL") or "BAAI/bge-small-en-v1.5"
-ENRICHMENT_APPSERVICE_URL = os.environ.get("ENRICHMENT_APPSERVICE_URL") or "enrichment"
+ENRICHMENT_APPSERVICE_URL = os.environ.get("ENRICHMENT_APPSERVICE_URL") or "http://infoasst-enrichment.infoasst.svc.cluster.local"
 ENRICHMENT_ENDPOINT = os.environ.get("ENRICHMENT_ENDPOINT") or None
 
 AZURE_AI_TRANSLATION_DOMAIN = os.environ.get("AZURE_AI_TRANSLATION_DOMAIN") or "api.cognitive.microsofttranslator.com"
@@ -112,9 +115,12 @@ ENABLE_TABULAR_DATA_ASSISTANT = os.environ.get("ENABLE_TABULAR_DATA_ASSISTANT") 
 ENABLE_MULTIMEDIA = os.environ.get("ENABLE_MULTIMEDIA") or False
 MAX_CSV_FILE_SIZE = os.environ.get("MAX_CSV_FILE_SIZE") or "7"
 
-IS_CONTAINERIZED_DEPLOYMENT = str_to_bool.get(os.environ.get("IS_CONTAINERIZED_DEPLOYMENT", "").lower()) or False
+#################### CF ENV vars for containerized deployment ####################
 WEAVIATE_URL = os.environ.get("WEAVIATE_URL", "") 
 WEAVIATE_INDEX_NAME = os.environ.get("WEAVIATE_INDEX", "WEAVIATE")
+DISCONNECTED_AI = str_to_bool.get(os.environ.get("DISCONNECTED_AI"))
+AZURE_LOCATION = os.environ.get("AZURE_LOCATION")
+##################################################################################
 
 log = logging.getLogger("uvicorn")
 log.setLevel('DEBUG')
@@ -136,7 +142,7 @@ azure_credential = DefaultAzureCredential(authority=AUTHORITY)
 
 keyVaultClient = SecretClient(vault_url=kv_uri, credential=azure_credential)
 
-if IS_CONTAINERIZED_DEPLOYMENT:
+if DISCONNECTED_AI:
     AZURE_OPENAI_SERVICE_KEY = AZURE_SEARCH_SERVICE_KEY = ""
 else:
     AZURE_OPENAI_SERVICE_KEY = keyVaultClient.get_secret("AZURE-OPENAI-SERVICE-KEY").value
@@ -215,7 +221,7 @@ class WeaviateSearch:
 
         return response
 
-if IS_CONTAINERIZED_DEPLOYMENT:
+if DISCONNECTED_AI:
     search_client = WeaviateSearch(
         url=WEAVIATE_URL, 
         index_name=WEAVIATE_INDEX_NAME
@@ -236,11 +242,8 @@ model_name = ''
 model_version = ''
 
 # Set up OpenAI management client
-if IS_CONTAINERIZED_DEPLOYMENT:
+if DISCONNECTED_AI:
     model_name = "mistral"
-    model_version = ""
-    embedding_model_name = ""
-    embedding_model_version = ""
 else:
     openai_mgmt_client = CognitiveServicesManagementClient(
         credential=azure_credential,
@@ -276,25 +279,23 @@ else:
             embedding_model_version = ""
 
 
-if IS_CONTAINERIZED_DEPLOYMENT:
-    if model_name == "mistral":
-        chat_approaches = {
-            "rrr": ChatReadRetrieveReadApproachMistral(
-                search_client,
-                KB_FIELDS_SOURCEFILE,
-                KB_FIELDS_CONTENT,
-                KB_FIELDS_PAGENUMBER,
-                KB_FIELDS_CHUNKFILE,
-                AZURE_BLOB_STORAGE_CONTAINER,
-                blob_client,
-                QUERY_TERM_LANGUAGE,
-                model_name,
-                model_version,
-                IS_CONTAINERIZED_DEPLOYMENT,
-                TARGET_EMBEDDINGS_MODEL,
-            )
-        }
-else:
+if DISCONNECTED_AI:
+    chat_approaches = {
+        "rrr": ChatReadRetrieveReadApproachMistral(
+            search_client,
+            KB_FIELDS_SOURCEFILE,
+            KB_FIELDS_CONTENT,
+            KB_FIELDS_PAGENUMBER,
+            KB_FIELDS_CHUNKFILE,
+            AZURE_BLOB_STORAGE_CONTAINER,
+            blob_client,
+            QUERY_TERM_LANGUAGE,
+            model_name,
+            DISCONNECTED_AI,
+            TARGET_EMBEDDINGS_MODEL,
+        )
+    }
+else:  
     chat_approaches = {
         Approaches.ReadRetrieveRead: ChatReadRetrieveReadApproach(
                                         search_client,
@@ -314,10 +315,11 @@ else:
                                         ENRICHMENT_APPSERVICE_URL,
                                         TARGET_TRANSLATION_LANGUAGE,
                                         ENRICHMENT_ENDPOINT,
+                                        AZURE_LOCATION,
                                         ENRICHMENT_KEY,
                                         AZURE_AI_TRANSLATION_DOMAIN,
                                         USE_SEMANTIC_RERANKER,
-                                        IS_CONTAINERIZED_DEPLOYMENT
+                                        DISCONNECTED_AI
         ),
         Approaches.ChatWebRetrieveRead: ChatWebRetrieveRead(
                                         model_name,
@@ -368,19 +370,36 @@ else:
         )
     }
 
-# Create API
 app = FastAPI(
     title="IA Web API",
     description="A Python API to serve as Backend For the Information Assistant Web App",
     version="0.1.0",
     docs_url="/docs",
+    dependencies=[Depends(get_current_user)], # The dependency that protects all of the endpoints
 )
+
+app.include_router(auth_router, prefix="/auth")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    if exc.status_code == 401:
+        return RedirectResponse(url="/auth/login")
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 @app.get("/", include_in_schema=False, response_class=RedirectResponse)
 async def root():
     """Redirect to the index.html page"""
-    return RedirectResponse(url="/index.html")
+    return RedirectResponse(url="/home")
 
+@app.get("/index.html")
+async def redirect_to_home():
+    return RedirectResponse(url="/home")
+
+@app.get("/home", response_class=HTMLResponse)
+async def home(request: Request):
+    return FileResponse("static/index.html")
 
 @app.post("/chat")
 async def chat(request: Request):
@@ -399,7 +418,7 @@ async def chat(request: Request):
     
     try:
         # If block for internal LLM
-        if IS_CONTAINERIZED_DEPLOYMENT:
+        if DISCONNECTED_AI:
             approach = "rrr"
             impl = chat_approaches.get(approach)
             r = impl.run(json_body["history"], json_body.get("overrides") or {})

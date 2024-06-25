@@ -1,0 +1,365 @@
+diff --git a/automation/charts/cert-manager-chart/templates/cainjector-deployment.yaml b/automation/charts/cert-manager-chart/templates/cainjector-deployment.yaml
+index 12201737..6f07809e 100644
+--- a/automation/charts/cert-manager-chart/templates/cainjector-deployment.yaml
++++ b/automation/charts/cert-manager-chart/templates/cainjector-deployment.yaml
+@@ -10,7 +10,7 @@ metadata:
+     app.kubernetes.io/instance: {{ .Release.Name }}
+     app.kubernetes.io/component: "cainjector"
+     {{- include "labels" . | nindent 4 }}
+-  {{- with .Values.cainjector.deploymentAnnotations }}
++  {{- with .Values.annotations }}
+   annotations:
+     {{- toYaml . | nindent 4 }}
+   {{- end }}
+@@ -90,10 +90,6 @@ spec:
+           resources:
+             {{- toYaml . | nindent 12 }}
+           {{- end }}
+-          {{- with .Values.cainjector.volumeMounts }}
+-          volumeMounts:
+-            {{- toYaml . | nindent 12 }}
+-          {{- end }}
+       {{- with .Values.cainjector.nodeSelector }}
+       nodeSelector:
+         {{- toYaml . | nindent 8 }}
+@@ -110,8 +106,4 @@ spec:
+       topologySpreadConstraints:
+         {{- toYaml . | nindent 8 }}
+       {{- end }}
+-      {{- with .Values.cainjector.volumes }}
+-      volumes:
+-        {{- toYaml . | nindent 8 }}
+-      {{- end }}
+ {{- end }}
+diff --git a/automation/charts/cert-manager-chart/templates/cainjector-poddisruptionbudget.yaml b/automation/charts/cert-manager-chart/templates/cainjector-poddisruptionbudget.yaml
+deleted file mode 100644
+index f080b753..00000000
+--- a/automation/charts/cert-manager-chart/templates/cainjector-poddisruptionbudget.yaml
++++ /dev/null
+@@ -1,26 +0,0 @@
+-{{- if .Values.cainjector.podDisruptionBudget.enabled }}
+-apiVersion: policy/v1
+-kind: PodDisruptionBudget
+-metadata:
+-  name: {{ include "cainjector.fullname" . }}
+-  namespace: {{ include "cert-manager.namespace" . }}
+-  labels:
+-    app: {{ include "cainjector.name" . }}
+-    app.kubernetes.io/name: {{ include "cainjector.name" . }}
+-    app.kubernetes.io/instance: {{ .Release.Name }}
+-    app.kubernetes.io/component: "cainjector"
+-    {{- include "labels" . | nindent 4 }}
+-spec:
+-  selector:
+-    matchLabels:
+-      app.kubernetes.io/name: {{ include "cainjector.name" . }}
+-      app.kubernetes.io/instance: {{ .Release.Name }}
+-      app.kubernetes.io/component: "cainjector"
+-
+-  {{- with .Values.cainjector.podDisruptionBudget.minAvailable }}
+-  minAvailable: {{ . }}
+-  {{- end }}
+-  {{- with .Values.cainjector.podDisruptionBudget.maxUnavailable }}
+-  maxUnavailable: {{ . }}
+-  {{- end }}
+-{{- end }}
+diff --git a/automation/charts/cert-manager-chart/templates/cainjector-rbac.yaml b/automation/charts/cert-manager-chart/templates/cainjector-rbac.yaml
+index 2aa59eee..ea268750 100644
+--- a/automation/charts/cert-manager-chart/templates/cainjector-rbac.yaml
++++ b/automation/charts/cert-manager-chart/templates/cainjector-rbac.yaml
+@@ -10,6 +10,10 @@ metadata:
+     app.kubernetes.io/instance: {{ .Release.Name }}
+     app.kubernetes.io/component: "cainjector"
+     {{- include "labels" . | nindent 4 }}
++{{- with .Values.annotations }}
++  annotations:
++{{ toYaml . | indent 4 }}
++{{- end }}
+ rules:
+   - apiGroups: ["cert-manager.io"]
+     resources: ["certificates"]
+@@ -22,13 +26,13 @@ rules:
+     verbs: ["get", "create", "update", "patch"]
+   - apiGroups: ["admissionregistration.k8s.io"]
+     resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
+-    verbs: ["get", "list", "watch", "update", "patch"]
++    verbs: ["get", "list", "watch", "update"]
+   - apiGroups: ["apiregistration.k8s.io"]
+     resources: ["apiservices"]
+-    verbs: ["get", "list", "watch", "update", "patch"]
++    verbs: ["get", "list", "watch", "update"]
+   - apiGroups: ["apiextensions.k8s.io"]
+     resources: ["customresourcedefinitions"]
+-    verbs: ["get", "list", "watch", "update", "patch"]
++    verbs: ["get", "list", "watch", "update"]
+ ---
+ apiVersion: rbac.authorization.k8s.io/v1
+ kind: ClusterRoleBinding
+diff --git a/automation/charts/cert-manager-chart/templates/deployment.yaml b/automation/charts/cert-manager-chart/templates/deployment.yaml
+index aea5736c..77e10067 100644
+--- a/automation/charts/cert-manager-chart/templates/deployment.yaml
++++ b/automation/charts/cert-manager-chart/templates/deployment.yaml
+@@ -9,7 +9,7 @@ metadata:
+     app.kubernetes.io/instance: {{ .Release.Name }}
+     app.kubernetes.io/component: "controller"
+     {{- include "labels" . | nindent 4 }}
+-  {{- with .Values.deploymentAnnotations }}
++  {{- with .Values.annotations }}
+   annotations:
+     {{- toYaml . | nindent 4 }}
+   {{- end }}
+@@ -113,22 +113,10 @@ spec:
+           {{- if .Values.maxConcurrentChallenges }}
+           - --max-concurrent-challenges={{ .Values.maxConcurrentChallenges }}
+           {{- end }}
+-          {{- if .Values.enableCertificateOwnerRef }}
+-          - --enable-certificate-owner-ref=true
+-          {{- end }}
+-          {{- if .Values.dns01RecursiveNameserversOnly }}
+-          - --dns01-recursive-nameservers-only=true
+-          {{- end }}
+-          {{- with .Values.dns01RecursiveNameservers }}
+-          - --dns01-recursive-nameservers={{ . }}
+-          {{- end }}
+           ports:
+           - containerPort: 9402
+             name: http-metrics
+             protocol: TCP
+-          - containerPort: 9403
+-            name: http-healthz
+-            protocol: TCP
+           {{- with .Values.containerSecurityContext }}
+           securityContext:
+             {{- toYaml . | nindent 12 }}
+@@ -161,24 +149,6 @@ spec:
+           resources:
+             {{- toYaml . | nindent 12 }}
+           {{- end }}
+-
+-          {{- with .Values.livenessProbe }}
+-          {{- if .enabled }}
+-          # LivenessProbe settings are based on those used for the Kubernetes
+-          # controller-manager. See:
+-          # https://github.com/kubernetes/kubernetes/blob/806b30170c61a38fedd54cc9ede4cd6275a1ad3b/cmd/kubeadm/app/util/staticpod/utils.go#L241-L245
+-          livenessProbe:
+-            httpGet:
+-              port: http-healthz
+-              path: /livez
+-              scheme: HTTP
+-            initialDelaySeconds: {{ .initialDelaySeconds }}
+-            periodSeconds: {{ .periodSeconds }}
+-            timeoutSeconds: {{ .timeoutSeconds }}
+-            successThreshold: {{ .successThreshold }}
+-            failureThreshold: {{ .failureThreshold }}
+-          {{- end }}
+-          {{- end }}
+       {{- with .Values.nodeSelector }}
+       nodeSelector:
+         {{- toYaml . | nindent 8 }}
+diff --git a/automation/charts/cert-manager-chart/templates/poddisruptionbudget.yaml b/automation/charts/cert-manager-chart/templates/poddisruptionbudget.yaml
+deleted file mode 100644
+index dab75ce6..00000000
+--- a/automation/charts/cert-manager-chart/templates/poddisruptionbudget.yaml
++++ /dev/null
+@@ -1,26 +0,0 @@
+-{{- if .Values.podDisruptionBudget.enabled }}
+-apiVersion: policy/v1
+-kind: PodDisruptionBudget
+-metadata:
+-  name: {{ include "cert-manager.fullname" . }}
+-  namespace: {{ include "cert-manager.namespace" . }}
+-  labels:
+-    app: {{ include "cert-manager.name" . }}
+-    app.kubernetes.io/name: {{ include "cert-manager.name" . }}
+-    app.kubernetes.io/instance: {{ .Release.Name }}
+-    app.kubernetes.io/component: "controller"
+-    {{- include "labels" . | nindent 4 }}
+-spec:
+-  selector:
+-    matchLabels:
+-      app.kubernetes.io/name: {{ include "cert-manager.name" . }}
+-      app.kubernetes.io/instance: {{ .Release.Name }}
+-      app.kubernetes.io/component: "controller"
+-
+-  {{- with .Values.podDisruptionBudget.minAvailable }}
+-  minAvailable: {{ . }}
+-  {{- end }}
+-  {{- with .Values.podDisruptionBudget.maxUnavailable }}
+-  maxUnavailable: {{ . }}
+-  {{- end }}
+-{{- end }}
+diff --git a/automation/charts/cert-manager-chart/templates/rbac.yaml b/automation/charts/cert-manager-chart/templates/rbac.yaml
+index 830e3728..361b1a22 100644
+--- a/automation/charts/cert-manager-chart/templates/rbac.yaml
++++ b/automation/charts/cert-manager-chart/templates/rbac.yaml
+@@ -70,6 +70,7 @@ rules:
+   - apiGroups: [""]
+     resources: ["events"]
+     verbs: ["create", "patch"]
++
+ ---
+ 
+ # ClusterIssuer controller role
+diff --git a/automation/charts/cert-manager-chart/templates/startupapicheck-job.yaml b/automation/charts/cert-manager-chart/templates/startupapicheck-job.yaml
+index a9b965e1..f55b5fe1 100644
+--- a/automation/charts/cert-manager-chart/templates/startupapicheck-job.yaml
++++ b/automation/charts/cert-manager-chart/templates/startupapicheck-job.yaml
+@@ -34,9 +34,6 @@ spec:
+     spec:
+       restartPolicy: OnFailure
+       serviceAccountName: {{ template "startupapicheck.serviceAccountName" . }}
+-      {{- if hasKey .Values.startupapicheck "automountServiceAccountToken" }}
+-      automountServiceAccountToken: {{ .Values.startupapicheck.automountServiceAccountToken }}
+-      {{- end }}
+       {{- with .Values.global.priorityClassName }}
+       priorityClassName: {{ . | quote }}
+       {{- end }}
+@@ -65,10 +62,6 @@ spec:
+           resources:
+             {{- toYaml . | nindent 12 }}
+           {{- end }}
+-          {{- with .Values.startupapicheck.volumeMounts }}
+-          volumeMounts:
+-            {{- toYaml . | nindent 12 }}
+-          {{- end }}
+       {{- with .Values.startupapicheck.nodeSelector }}
+       nodeSelector:
+         {{- toYaml . | nindent 8 }}
+@@ -81,8 +74,4 @@ spec:
+       tolerations:
+         {{- toYaml . | nindent 8 }}
+       {{- end }}
+-      {{- with .Values.startupapicheck.volumes }}
+-      volumes:
+-        {{- toYaml . | nindent 8 }}
+-      {{- end }}
+ {{- end }}
+diff --git a/automation/charts/cert-manager-chart/templates/webhook-config.yaml b/automation/charts/cert-manager-chart/templates/webhook-config.yaml
+index f3f72f02..6afacc28 100644
+--- a/automation/charts/cert-manager-chart/templates/webhook-config.yaml
++++ b/automation/charts/cert-manager-chart/templates/webhook-config.yaml
+@@ -18,6 +18,10 @@ metadata:
+     app.kubernetes.io/instance: {{ .Release.Name }}
+     app.kubernetes.io/component: "webhook"
+     {{- include "labels" . | nindent 4 }}
++{{- with .Values.annotations }}
++  annotations:
++{{ toYaml . | indent 4 }}
++{{- end }}
+ data:
+   {{- if .Values.webhook.config }}
+   config.yaml: |
+diff --git a/automation/charts/cert-manager-chart/templates/webhook-deployment.yaml b/automation/charts/cert-manager-chart/templates/webhook-deployment.yaml
+index 043c4b15..a96130c2 100644
+--- a/automation/charts/cert-manager-chart/templates/webhook-deployment.yaml
++++ b/automation/charts/cert-manager-chart/templates/webhook-deployment.yaml
+@@ -9,7 +9,7 @@ metadata:
+     app.kubernetes.io/instance: {{ .Release.Name }}
+     app.kubernetes.io/component: "webhook"
+     {{- include "labels" . | nindent 4 }}
+-  {{- with .Values.webhook.deploymentAnnotations }}
++  {{- with .Values.annotations }}
+   annotations:
+     {{- toYaml . | nindent 4 }}
+   {{- end }}
+@@ -146,15 +146,10 @@ spec:
+           resources:
+             {{- toYaml . | nindent 12 }}
+           {{- end }}
+-          {{- if or .Values.webhook.config .Values.webhook.volumeMounts }}
++          {{- if .Values.webhook.config }}
+           volumeMounts:
+-            {{- if .Values.webhook.config }}
+             - name: config
+               mountPath: /var/cert-manager/config
+-            {{- end }}
+-            {{- if .Values.webhook.volumeMounts }}
+-            {{- toYaml .Values.webhook.volumeMounts | nindent 12 }}
+-            {{- end }}
+           {{- end }}
+       {{- with .Values.webhook.nodeSelector }}
+       nodeSelector:
+@@ -172,14 +167,9 @@ spec:
+       topologySpreadConstraints:
+         {{- toYaml . | nindent 8 }}
+       {{- end }}
+-      {{- if or .Values.webhook.config .Values.webhook.volumes }}
++      {{- if .Values.webhook.config }}
+       volumes:
+-        {{- if .Values.webhook.config }}
+         - name: config
+           configMap:
+             name: {{ include "webhook.fullname" . }}
+-        {{- end }}
+-        {{- if .Values.webhook.volumes }}
+-        {{- toYaml .Values.webhook.volumes | nindent 8 }}
+-        {{- end }}
+       {{- end }}
+diff --git a/automation/charts/cert-manager-chart/templates/webhook-poddisruptionbudget.yaml b/automation/charts/cert-manager-chart/templates/webhook-poddisruptionbudget.yaml
+deleted file mode 100644
+index c8a357cb..00000000
+--- a/automation/charts/cert-manager-chart/templates/webhook-poddisruptionbudget.yaml
++++ /dev/null
+@@ -1,26 +0,0 @@
+-{{- if .Values.webhook.podDisruptionBudget.enabled }}
+-apiVersion: policy/v1
+-kind: PodDisruptionBudget
+-metadata:
+-  name: {{ include "webhook.fullname" . }}
+-  namespace: {{ include "cert-manager.namespace" . }}
+-  labels:
+-    app: {{ include "webhook.name" . }}
+-    app.kubernetes.io/name: {{ include "webhook.name" . }}
+-    app.kubernetes.io/instance: {{ .Release.Name }}
+-    app.kubernetes.io/component: "webhook"
+-    {{- include "labels" . | nindent 4 }}
+-spec:
+-  selector:
+-    matchLabels:
+-      app.kubernetes.io/name: {{ include "webhook.name" . }}
+-      app.kubernetes.io/instance: {{ .Release.Name }}
+-      app.kubernetes.io/component: "webhook"
+-
+-  {{- with .Values.webhook.podDisruptionBudget.minAvailable }}
+-  minAvailable: {{ . }}
+-  {{- end }}
+-  {{- with .Values.webhook.podDisruptionBudget.maxUnavailable }}
+-  maxUnavailable: {{ . }}
+-  {{- end }}
+-{{- end }}
+diff --git a/automation/charts/cert-manager-chart/templates/webhook-psp-clusterrole.yaml b/automation/charts/cert-manager-chart/templates/webhook-psp-clusterrole.yaml
+index f6fa4c55..2a8808e7 100644
+--- a/automation/charts/cert-manager-chart/templates/webhook-psp-clusterrole.yaml
++++ b/automation/charts/cert-manager-chart/templates/webhook-psp-clusterrole.yaml
+@@ -15,4 +15,4 @@ rules:
+   verbs:     ['use']
+   resourceNames:
+   - {{ template "webhook.fullname" . }}
+-{{- end }}
++{{- end }} 
+diff --git a/automation/charts/cert-manager-chart/templates/webhook-rbac.yaml b/automation/charts/cert-manager-chart/templates/webhook-rbac.yaml
+index b075ffd4..bc8d80a9 100644
+--- a/automation/charts/cert-manager-chart/templates/webhook-rbac.yaml
++++ b/automation/charts/cert-manager-chart/templates/webhook-rbac.yaml
+@@ -10,6 +10,10 @@ metadata:
+     app.kubernetes.io/instance: {{ .Release.Name }}
+     app.kubernetes.io/component: "webhook"
+     {{- include "labels" . | nindent 4 }}
++{{- with .Values.annotations }}
++  annotations:
++{{ toYaml . | indent 4 }}
++{{- end }}
+ rules:
+ - apiGroups: [""]
+   resources: ["secrets"]
+@@ -33,6 +37,10 @@ metadata:
+     app.kubernetes.io/instance: {{ .Release.Name }}
+     app.kubernetes.io/component: "webhook"
+     {{- include "labels" . | nindent 4 }}
++{{- with .Values.annotations }}
++  annotations:
++{{ toYaml . | indent 4 }}
++{{- end }}
+ roleRef:
+   apiGroup: rbac.authorization.k8s.io
+   kind: Role

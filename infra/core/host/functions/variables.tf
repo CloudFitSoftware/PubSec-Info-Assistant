@@ -11,17 +11,17 @@ variable "location" {
 }
 
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }
 
 variable "kind" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "reserved" {
-  type = bool
+  type    = bool
   default = true
 }
 
@@ -39,7 +39,7 @@ variable "storageAccountId" {
   default = ""
 }
 
-variable "keyVaultUri" { 
+variable "keyVaultUri" {
   type = string
 }
 
@@ -267,6 +267,10 @@ variable "imageName" {
 variable "imageTag" {
   type = string
 }
-variable "isContainerizedDeployment" {
-  type        = bool
+variable "containerizedAppServices" {
+  type = bool
+}
+
+variable "disconnectedAi" {
+  type = bool
 }

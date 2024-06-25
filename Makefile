@@ -11,7 +11,7 @@ help: ## Show this help
 
 deploy: build infrastructure extract-env deploy-enrichments deploy-search-indexes deploy-webapp deploy-functions ## Deploy infrastructure and application code
 
-deploy-containers: build infrastructure extract-env deploy-search-indexes ## Need to add docker build/push steps here, but for now this is all we need
+deploy-containers: build infrastructure ## Need to add docker build/push steps here, but for now this is all we need
 
 build-deploy-webapp: build extract-env deploy-webapp ##Build and Deploy the Webapp
 build-deploy-enrichments: build extract-env deploy-enrichments ##Build and Deploy the Enrichment Webapp

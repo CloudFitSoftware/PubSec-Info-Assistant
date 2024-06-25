@@ -3,12 +3,12 @@ variable "name" {
 }
 
 variable "location" {
-  type = string
+  type    = string
   default = "Your_Resource_Group_Location"
 }
 
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }
 
@@ -61,6 +61,6 @@ variable "resourceGroupName" {
   default = ""
 }
 
-variable "keyVaultId" { 
+variable "keyVaultId" {
   type = string
 }

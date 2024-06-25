@@ -1,7 +1,7 @@
 
 
 variable "principalType" {
-  type = string
+  type    = string
   default = "ServicePrincipal"
   validation {
     condition     = contains(["Device", "ForeignGroup", "Group", "ServicePrincipal", "User"], var.principalType)
@@ -47,4 +47,16 @@ variable "spClientSecret" {
 variable "resourceGroupName" {
   type    = string
   default = ""
+}
+
+variable "containerizedAppServices" {
+  type = bool
+}
+
+variable "sharedKvName" {
+  type = string
+}
+
+variable "sharedKvResourceGroup" {
+  type = string
 }

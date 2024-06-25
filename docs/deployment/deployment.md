@@ -81,12 +81,14 @@ DEFAULT_LANGUAGE | Yes | Use the parameter to specify the matching ENV file loca
 ENABLE_CUSTOMER_USAGE_ATTRIBUTION <br>CUSTOMER_USAGE_ATTRIBUTION_ID | No | By default, **ENABLE_CUSTOMER_USAGE_ATTRIBUTION** is set to `true`. The CUA GUID which is pre-configured will tell Microsoft about the usage of this software. Please see [Data Collection Notice](/README.md#data-collection-notice) for more information. <br/><br/>You may provide your own CUA GUID by changing the value in **CUSTOMER_USAGE_ATTRIBUTION_ID**. Ensure you understand how to properly notify your customers by reading <https://learn.microsoft.com/en-us/partner-center/marketplace/azure-partner-customer-usage-attribution#notify-your-customers>.<br/><br/>To disable data collection, set **ENABLE_CUSTOMER_USAGE_ATTRIBUTION** to `false`.
 ENABLE_DEV_CODE | No | Defaults to `false`. It is not recommended to enable this flag, it is for development testing scenarios only.
 APPLICATION_TITLE | No | Defaults to "". Providing a value for this parameter will replace the Information Assistant's title in the black banner at the top of the UX.
-IS_CONTAINERIZED_DEPLOYMENT | Yes | If true, application deploys containerized, uses LLM in fileshare, and leverages weaviate instead of Azure Search
-AKS_USER_AGENTPOOL_SKU | Yes if IS_CONTAINERIZED_DEPLOYMENT, else No | The following setting is for the pool that will run the LLM. The NCv3 SKUs require quota limit increases. The NC series have nVidia GPUs that greatly improve the performance of the LLM.  Any other SKU will have severe impacts on the time it takes to generate responses. 
+AKS_USER_AGENTPOOL_SKU | Yes if CONTAINERIZED_APP_SERVICES, else No | The following setting is for the pool that will run the LLM. The NCv3 SKUs require quota limit increases. The NC series have nVidia GPUs that greatly improve the performance of the LLM.  Any other SKU will have severe impacts on the time it takes to generate responses. 
 REQUIRE_WEBSITE_SECURITY_MEMBERSHIP | Yes | # Use this setting to determine whether a user needs to be granted explicit access to the website via an Azure AD Enterprise Application membership (true) or allow the website to be available to anyone in the Azure tenant (false). Defaults to false. If set to true, A tenant level administrator will be required to grant the implicit grant workflow for the Azure AD App Registration manually.
-USE_EXISTING_ACR | Yes if IS_CONTAINERIZED_DEPLOYMENT, else No |  If using an existing ACR, set USE_EXISTING_ACR to true and fill in the following values. This requires the ACR to exist in the same subscription as this deployment.
+USE_EXISTING_ACR | Yes if CONTAINERIZED_APP_SERVICES, else No |  If using an existing ACR, set USE_EXISTING_ACR to true and fill in the following values. This requires the ACR to exist in the same subscription as this deployment.
 ACR_NAME | Yes if USE_EXISTING_ACR, else No | Name of shared ACR
 ACR_RESOURCE_GROUP | Yes if USE_EXISTING_ACR, else No | ACR resource group
+CONTAINERIZED_APP_SERVICES | Yes | This flag is used to decide whether to run Webapp, Enrichments, and Functions as containers or not. 
+DISCONNECTED_AI | Yes | This flag enables you to use a disconnected components (LLM, Reranker, T2v, and Weaviate) or Azure native components when the CONTAINERIZED_APP_SERVICES flag is set to true
+
 
 
 ## Log into Azure using the Azure CLI
@@ -124,6 +126,10 @@ From this output, grab the Subscription ID of the subscription you intend to dep
 ``` bash
     az account set --subscription mysubscriptionID
 ```
+
+## Set CloudFit Deployment Flags
+
+For this non-containerized deployment, be sure to set `CONTAINERIZED_APP_SERVICES` and `DISCONNECTED_AI` to false.
 
 ## Deploy and Configure Azure resources
 

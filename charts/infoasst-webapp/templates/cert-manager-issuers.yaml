@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-prod
+  namespace: istio-system
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: command_and_control_Mailbox@cloudfitsoftware.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    disableAccountKeyGeneration: true
+    solvers:
+    - selector: {}
+      http01:
+        ingress:
+          class: istio

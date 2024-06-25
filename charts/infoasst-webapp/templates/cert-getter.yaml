@@ -1,0 +1,11 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: infoasst-tls
+  namespace: istio-system
+spec:
+  secretName: infoasst-tls-cert
+  issuerRef:
+    name: letsencrypt-prod
+  dnsNames:
+    - infoasst.{{ .Values.webapp.env.randomString }}.{{ .Values.webapp.env.topLevelDomain }}

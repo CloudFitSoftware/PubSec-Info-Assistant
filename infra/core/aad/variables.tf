@@ -3,12 +3,12 @@ variable "randomString" {
 }
 
 variable "requireWebsiteSecurityMembership" {
-  type = bool
+  type    = bool
   default = false
 }
 
 variable "azure_websites_domain" {
-  type        = string
+  type = string
 }
 
 variable "isInAutomation" {
@@ -31,4 +31,12 @@ variable "aadMgmtServicePrincipalId" {
 variable "aadMgmtClientSecret" {
   type      = string
   sensitive = true
+}
+
+variable "containerizedAppServices" {
+  type = string
+}
+
+variable "topLevelDomain" {
+  type = string
 }

@@ -1,0 +1,189 @@
+{{- $root := . }}
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: {{ .Values.namespace }}
+  name: istiocontrolplane
+spec:
+  profile: default
+  hub: {{ .Values.images.hub }}
+  tag: {{ .Values.images.tag }}
+  meshConfig:
+    accessLogFile: /dev/stdout
+    accessLogEncoding: JSON
+    enableTracing: false
+  components:
+    pilot:
+      enabled: true
+      k8s:
+        resources: {{ toYaml .Values.resources.pilot | nindent 10 }}
+        {{- if .Values.ha.enabled }}
+        hpaSpec:
+          minReplicas: {{ .Values.pilot.hpa.minReplicas }}
+          maxReplicas: {{ .Values.pilot.hpa.maxReplicas }}
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: {{ .Values.pilot.hpa.cpuTargetUtilization }}
+        {{- else }}
+        podDisruptionBudget:
+          minAvailable: 0
+        hpaSpec:
+          minReplicas: 1
+          maxReplicas: {{ .Values.pilot.hpa.maxReplicas }}
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: {{ .Values.pilot.hpa.cpuTargetUtilization }}
+        {{- end }}
+    ingressGateways:
+    - name: istio-ingressgateway
+      enabled: {{ .Values.ingressGateways.default.enabled }}
+      {{- if .Values.ingressGateways.default.enabled }}
+      k8s:
+        {{- if or .Values.ingressGateways.serviceAnnotations .Values.ingressGateways.default.serviceAnnotations }}
+        serviceAnnotations:
+        {{- range $key, $value := .Values.ingressGateways.serviceAnnotations }}
+          {{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- range $key, $value := .Values.ingressGateways.default.serviceAnnotations }}
+          {{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.ha.enabled }}
+        hpaSpec:
+          minReplicas: {{ .Values.ingressGateways.hpa.minReplicas }}
+          maxReplicas: {{ .Values.ingressGateways.hpa.maxReplicas }}
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: {{ .Values.ingressGateways.hpa.cpuTargetUtilization }}
+        {{- else }}
+        podDisruptionBudget:
+          minAvailable: 0
+        hpaSpec:
+          minReplicas: 1
+          maxReplicas: {{ .Values.ingressGateways.hpa.maxReplicas }}
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: {{ .Values.ingressGateways.hpa.cpuTargetUtilization }}
+        {{- end }}
+        resources:
+          requests:
+            cpu: {{ .Values.ingressGateways.resources.requests.cpu }}
+            memory: {{ .Values.ingressGateways.resources.requests.memory }}
+          limits:
+            cpu: {{ .Values.ingressGateways.resources.limits.cpu }}
+            memory: {{ .Values.ingressGateways.resources.limits.memory }}
+        service:
+          externalTrafficPolicy: Local
+        {{- if .Values.ingressGateways.loadBalancerStaticIp }}
+          loadBalancerIP: {{ .Values.ingressGateways.loadBalancerStaticIp }}
+        {{- end }}
+        strategy:
+          rollingUpdate:
+            maxSurge: 100%
+            maxUnavailable: 25%
+      {{- end }}
+    {{- range .Values.ingressGateways.ipGatewaySetup }}
+    - name: {{ .name }}
+      enabled: true
+      label:
+        app: istio-{{ .name }}
+        istio: {{ .name }}
+      k8s:        
+        {{- if or $root.Values.ingressGateways.serviceAnnotations .serviceAnnotations }}
+        serviceAnnotations:
+        {{- range $key, $value := $root.Values.ingressGateways.serviceAnnotations }}
+          {{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- range $key, $value := .serviceAnnotations }}
+          {{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.ha.enabled }}
+        hpaSpec:
+          minReplicas: {{ $root.Values.ingressGateways.hpa.minReplicas }}
+          maxReplicas: {{ $root.Values.ingressGateways.hpa.maxReplicas }}
+          metrics:
+          - type: Resource
+                resource:
+                  name: cpu
+                  target:
+                    type: Utilization
+                    averageUtilization: {{ $root.Values.ingressGateways.hpa.cpuTargetUtilization }}
+        {{- else }}
+        podDisruptionBudget:
+          minAvailable: 0
+        hpaSpec:
+          minReplicas: 1
+          maxReplicas: {{ $root.Values.ingressGateways.hpa.maxReplicas }}
+          metrics:
+          - type: Resource
+                resource:
+                  name: cpu
+                  target:
+                    type: Utilization
+                    averageUtilization: {{ $root.Values.ingressGateways.hpa.cpuTargetUtilization }}
+        {{- end }}
+        resources:
+          requests:
+            cpu: {{ $root.Values.ingressGateways.resources.requests.cpu }}
+            memory: {{ $root.Values.ingressGateways.resources.requests.memory }}
+          limits:
+            cpu: {{ $root.Values.ingressGateways.resources.limits.cpu }}
+            memory: {{ $root.Values.ingressGateways.resources.limits.memory }}
+        {{- if .loadBalancerStaticIp }}
+        service:
+          loadBalancerIP: {{ .loadBalancerStaticIp }}
+        {{- end }}
+        strategy:
+          rollingUpdate:
+            maxSurge: 100%
+            maxUnavailable: 25%
+    {{- end }}
+  values:
+    global:
+      autoscalingv2API: true
+    {{- if .Values.images.pullSecrets.enabled }}
+      imagePullSecrets: [{{ .Values.images.pullSecrets.name}}]
+    {{- end }}
+      logging:
+        level: {{ default "info" .Values.meshConfig.logLevel }}
+      proxy_init:
+        # {{- if .Values.images.proxy.digest }}
+        # image: {{ .Values.images.proxy.repository }}@{{ .Values.images.proxy.digest }}
+        # {{- end }}
+        image: {{ .Values.images.proxy.repository }}:{{ .Values.images.proxy.tag }}
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 256Mi
+      proxy:
+        # {{- if .Values.images.proxy.digest }}
+        # image: {{ .Values.images.proxy.repository }}@{{ .Values.images.proxy.digest }}
+        # {{- end }}
+        image: {{ .Values.images.proxy.repository }}:{{ .Values.images.proxy.tag }}
+        resources: {{ toYaml .Values.resources.globalProxy | nindent 10 }}
+    pilot:
+      # {{- if .Values.images.pilot.digest }}
+      # image: {{ .Values.images.pilot.repository }}@{{ .Values.images.pilot.digest }}
+      # {{- end }}
+      image: {{ .Values.images.pilot.repository }}:{{ .Values.images.pilot.tag }}
+      resources: {{ toYaml .Values.resources.pilot | nindent 8 }}
