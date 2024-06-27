@@ -48,15 +48,3 @@ variable "resourceGroupName" {
   type    = string
   default = ""
 }
-
-variable "containerizedAppServices" {
-  type = bool
-}
-
-variable "sharedKvName" {
-  type = string
-}
-
-variable "sharedKvResourceGroup" {
-  type = string
-}

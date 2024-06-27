@@ -55,5 +55,3 @@ export TF_VAR_acrResourceGroup=$ACR_RESOURCE_GROUP
 export TF_VAR_keyVaultName=$DEPLOYMENT_KEYVAULT_NAME
 export TF_VAR_topLevelDomain=$TOP_LEVEL_DOMAIN
 export TF_VAR_authorityHost=$AUTHORITY_HOST
-export TF_VAR_sharedKvName=$SHARED_KV_NAME
-export TF_VAR_sharedKvResourceGroup=$SHARED_KV_RG

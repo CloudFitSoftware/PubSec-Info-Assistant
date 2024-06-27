@@ -571,11 +571,3 @@ variable "disconnectedAi" {
 variable "topLevelDomain" {
   type = string
 }
-
-variable "sharedKvName" {
-  type = string
-}
-
-variable "sharedKvResourceGroup" {
-  type = string
-}

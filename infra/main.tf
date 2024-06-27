@@ -497,9 +497,6 @@ module "kvModule" {
   resourceGroupId          = azurerm_resource_group.rg.id
   resourceGroupName        = azurerm_resource_group.rg.name
   tags                     = local.tags
-  containerizedAppServices = var.containerizedAppServices
-  sharedKvName             = var.sharedKvName
-  sharedKvResourceGroup    = var.sharedKvResourceGroup
 }
 
 module "bingSearch" {
@@ -531,6 +528,7 @@ TEMPLATE
 // DEPLOYMENT OF RESOURCES NEEDED FOR CONTAINERIZED APPLICATION
 
 data "azurerm_container_registry" "existing" {
+  count               = var.useExistingAcr ? 1 : 0
   name                = var.acrName
   resource_group_name = var.acrResourceGroup
 }
@@ -566,7 +564,7 @@ module "acr" {
 module "ACRRoleAssignmentFunctions" {
   count            = var.containerizedAppServices ? 1 : 0
   source           = "./core/security/role"
-  scope            = var.useExistingAcr ? data.azurerm_container_registry.existing.id : azurerm_resource_group.rg.id
+  scope            = var.useExistingAcr ? data.azurerm_container_registry.existing[0].id : azurerm_resource_group.rg.id
   principalId      = module.functions.function_app_identity_principal_id
   principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
   roleDefinitionId = local.azure_roles.AcrPull
@@ -578,7 +576,7 @@ module "ACRRoleAssignmentFunctions" {
 module "ACRRoleAssignmentKubernetes" {
   count            = var.containerizedAppServices ? 1 : 0
   source           = "./core/security/role"
-  scope            = var.useExistingAcr ? data.azurerm_container_registry.existing.id : azurerm_resource_group.rg.id
+  scope            = var.useExistingAcr ? data.azurerm_container_registry.existing[0].id : azurerm_resource_group.rg.id
   principalId      = module.aks[0].kubletId
   principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
   roleDefinitionId = local.azure_roles.AcrPull
