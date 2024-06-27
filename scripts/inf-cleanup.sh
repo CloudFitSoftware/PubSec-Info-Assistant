@@ -12,7 +12,7 @@ printInfo() {
     printf "$YELLOW\n%s$RESET\n" "$1"
 }
 
-figlet Infrastructure Cleanup
+echo "Infrastructure Cleanup"
 
 # Get the directory that this script is in
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -41,7 +41,7 @@ set -e
 
 if [ $EXIT_CODE -ne 0 ]; then
 
-    figlet Infrastructure DESTROY
+    echo "Infrastructure DESTROY"
     
     printInfo "Destruction failed, falling back to destroy resource group..."
     

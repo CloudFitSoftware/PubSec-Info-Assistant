@@ -5,7 +5,7 @@
 
 set -e
 
-figlet Create Configuration File
+echo "Create Configuration File"
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 FILEPATH="$DIR/../infra/sp_config/config.json"
