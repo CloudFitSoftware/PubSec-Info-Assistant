@@ -31,6 +31,12 @@ resource "azurerm_key_vault_secret" "spClientKeySecret" {
   key_vault_id = azurerm_key_vault.kv.id
 }
 
+resource "azurerm_key_vault_secret" "tlsKey" {
+  name         = "TLS-KEY"
+  value        = "placeholder"
+  key_vault_id = azurerm_key_vault.kv.id
+}
+
 output "keyVaultName" {
   value = azurerm_key_vault.kv.name
 }
@@ -41,21 +47,4 @@ output "keyVaultId" {
 
 output "keyVaultUri" {
   value = azurerm_key_vault.kv.vault_uri
-}
-
-# retreiving the TLS-KEY from already existing shared KV
-data "azurerm_key_vault" "sharedKv" {
-  count               = var.containerizedAppServices ? 1 : 0
-  name                = var.sharedKvName
-  resource_group_name = var.sharedKvResourceGroup
-}
-
-data "azurerm_key_vault_secret" "tls" {
-  count        = var.containerizedAppServices ? 1 : 0
-  name         = "TLS-KEY"
-  key_vault_id = data.azurerm_key_vault.sharedKv[0].id
-}
-
-output "tls_key" {
-  value = var.containerizedAppServices ? data.azurerm_key_vault_secret.tls[0].value : ""
 }

@@ -4,7 +4,7 @@ output "AZURE_LOCATION" {
 }
 
 output "AZURE_OPENAI_SERVICE" {
-  value = var.disconnectedAi ? "" : (var.useExistingAOAIService ? var.azureOpenAIServiceName : module.openaiServices[0].name)
+  value = var.disconnectedAi ? "" : (var.useExistingAOAIService ? var.azureOpenAIServiceName : module.openaiServices.name)
 }
 
 output "AZURE_SEARCH_INDEX" {
@@ -258,9 +258,4 @@ output "PUBLIC_IP_NAME" {
 
 output "APP_DOMAIN" {
   value = var.containerizedAppServices ? "https://infoasst.${random_string.random.result}.${var.topLevelDomain}" : "https://infoasst-web-${random_string.random.result}.${var.azure_websites_domain}"
-}
-
-output "TLS_KEY" {
-  value     = module.kvModule.tls_key
-  sensitive = true
 }
