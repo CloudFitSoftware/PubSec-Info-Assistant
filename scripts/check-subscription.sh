@@ -9,7 +9,7 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "${DIR}/load-env.sh"
 
-figlet Check Subscription
+echo "Check Subscription"
 
 # This is called if we are in a CI system and we will login
 # with a Service Principal.
