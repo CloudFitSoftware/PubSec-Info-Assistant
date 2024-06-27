@@ -4,7 +4,7 @@
 #!/bin/bash
 set -e
 
-figlet Functional Tests
+echo "Functional Tests"
 
 # Get the directory that this script is in - move to tests dir
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"

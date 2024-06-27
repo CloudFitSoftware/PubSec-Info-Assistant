@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-figlet Build Containers
+echo "Build Containers"
 
 # Get the directory that this script is in
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"

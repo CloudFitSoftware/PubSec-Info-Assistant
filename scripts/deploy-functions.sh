@@ -4,7 +4,7 @@
 #!/bin/bash
 set -e
 
-figlet Deploy Azure Functions
+echo "Deploy Azure Functions"
 
 # Get the directory that this script is in
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"

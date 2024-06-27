@@ -20,7 +20,7 @@ echo -n "Would you like users to have to be explicitly assigned to the app? (y/n
 read require_website_security_membership
 export REQUIRE_WEBSITE_SECURITY_MEMBERSHIP=$require_website_security_membership
 
-figlet Create AD Objects
+echo "Create AD Objects"
 
 # get or create the random.txt from local file system
 if [ -f "../infra/.state/${WORKSPACE}/random.txt" ]; then

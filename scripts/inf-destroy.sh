@@ -10,7 +10,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 # load env vars
 source "${DIR}/load-env.sh"
 
-figlet Infrastructure DESTROY
+echo "Infrastructure DESTROY"
 
 if [ -n "${IN_AUTOMATION}" ]
 then
