@@ -533,7 +533,7 @@ variable "useExistingAcr" {
 
 variable "acrSku" {
   type    = string
-  default = "Basic"
+  default = "Premium"
 }
 
 // Functions
