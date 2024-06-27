@@ -13,9 +13,8 @@ resource "azurerm_storage_account" "storage" {
   min_tls_version           = var.minimumTlsVersion
   enable_https_traffic_only = true
   public_network_access_enabled = false
-
   network_rules {
-    default_action = "Allow"
+    default_action = "Deny"
     bypass         = ["AzureServices"]
   }
 
