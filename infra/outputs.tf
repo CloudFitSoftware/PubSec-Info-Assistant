@@ -160,7 +160,7 @@ output "CHAT_WARNING_BANNER_TEXT" {
 }
 
 output "AZURE_OPENAI_ENDPOINT" {
-  value = var.disconnectedAi ? "" : (var.useExistingAOAIService ? "https://${var.azureOpenAIServiceName}.${var.azure_openai_domain}/" : module.openaiServices[0].endpoint)
+  value = var.disconnectedAi ? "" : (var.useExistingAOAIService ? "https://${var.azureOpenAIServiceName}.${var.azure_openai_domain}/" : module.openaiServices.endpoint)
 }
 
 output "AZURE_ENVIRONMENT" {

@@ -88,7 +88,7 @@ resource "azurerm_linux_function_app" "function_app" {
   storage_account_name       = var.blobStorageAccountName
   storage_account_access_key = "@Microsoft.KeyVault(SecretUri=${var.keyVaultUri}secrets/AZURE-BLOB-STORAGE-KEY)"
   https_only                 = true
-
+  public_network_access_enabled = false
   site_config {
     application_stack {
       python_version = "3.10"

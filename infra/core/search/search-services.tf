@@ -3,7 +3,7 @@ resource "azurerm_search_service" "search" {
   name                = var.name
   location            = var.location
   resource_group_name = var.resourceGroupName
-  sku                 = var.sku["name"]
+  sku                 = var.sku_name
 
   identity {
     type = "SystemAssigned"

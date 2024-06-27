@@ -8,11 +8,11 @@ ENV_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export ARM_ENVIRONMENT=public
 
 #setting up necessary permissions to access the Docker daemon socket
-sudo chmod 666 /var/run/docker.sock
+# sudo chmod 666 /var/run/docker.sock
 
 #Ensure hw time sync is enabled to avoid time drift when the host OS sleeps. 
 #Time sync is required else Azure authentication tokens will be invalid
-source "${ENV_DIR}/time-sync.sh"
+# source "${ENV_DIR}/time-sync.sh"
 
 # Default values - you can override these in your environment.env
 # -------------------------------------------------------------------------------------------------------

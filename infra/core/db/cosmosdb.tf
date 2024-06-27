@@ -48,7 +48,7 @@ resource "azurerm_cosmosdb_account" "cosmosdb_account" {
     location          = var.location
     failover_priority = 0
   }
-
+  public_network_access_enabled = false
   tags = var.tags
 }
 

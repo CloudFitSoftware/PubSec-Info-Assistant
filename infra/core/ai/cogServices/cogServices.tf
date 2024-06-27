@@ -5,6 +5,7 @@ resource "azurerm_cognitive_account" "cognitiveService" {
   kind                = "CognitiveServices"
   sku_name            = var.sku["name"]
   tags                = var.tags
+  public_network_access_enabled = false
 }
 
 resource "azurerm_key_vault_secret" "search_service_key" {

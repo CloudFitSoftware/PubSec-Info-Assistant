@@ -5,6 +5,7 @@ resource "azurerm_container_registry" "acr" {
   location            = var.location
   sku                 = var.acrSku
   admin_enabled       = false
+  public_network_access_enabled = false
 }
 
 data "azurerm_container_registry" "acrExisting" {
