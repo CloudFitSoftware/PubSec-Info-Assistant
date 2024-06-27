@@ -11,6 +11,10 @@ resource "azurerm_key_vault" "kv" {
   soft_delete_retention_days      = 7
   purge_protection_enabled        = true
   public_network_access_enabled   = false
+  network_acls {
+    default_action = "Deny"
+    bypass         = "AzureServices"
+  }
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = var.kvAccessObjectId
