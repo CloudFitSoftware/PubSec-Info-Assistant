@@ -10,7 +10,7 @@ resource "azurerm_key_vault" "kv" {
   enabled_for_template_deployment = true
   soft_delete_retention_days      = 7
   purge_protection_enabled        = true
-
+  public_network_access_enabled   = false
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = var.kvAccessObjectId
