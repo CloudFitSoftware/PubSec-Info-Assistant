@@ -546,6 +546,7 @@ module "aks" {
   location          = var.location
   resourceGroupName = azurerm_resource_group.rg.name
   tenantId          = var.tenantId
+  disconnectedAi    = var.disconnectedAi
   depends_on        = [module.kvModule]
 }
 

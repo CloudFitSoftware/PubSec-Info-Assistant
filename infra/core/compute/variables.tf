@@ -50,4 +50,8 @@ variable "tenantId" {
   default = ""
 }
 
+variable "disconnectedAi" {
+  type = string
+}
+
 

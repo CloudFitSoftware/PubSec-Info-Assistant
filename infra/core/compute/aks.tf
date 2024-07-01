@@ -18,6 +18,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 }
 
 resource "azurerm_kubernetes_cluster_node_pool" "infoasst" {
+  count                 = var.disconnectedAi ? 1 : 0
   name                  = "infoasst"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
   vm_size               = var.aksUserVmSize
