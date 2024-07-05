@@ -10,12 +10,11 @@ resource "azurerm_key_vault" "kv" {
   enabled_for_template_deployment = true
   soft_delete_retention_days      = 7
   purge_protection_enabled        = true
-  public_network_access_enabled   = false
   enable_rbac_authorization       = true
   network_acls {
     default_action = "Deny"
     bypass         = "AzureServices"
-    virtual_network_subnet_ids = ["/subscriptions/${var.subscriptionId}/resourceGroups/asksgt-rg-001/providers/Microsoft.Network/virtualNetworks/az-vnet-genai-001/subnets/kv"]
+    virtual_network_subnet_ids = [data.azurerm_virtual_network_subnets.existing.id]
   }
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id

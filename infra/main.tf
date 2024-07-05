@@ -539,6 +539,12 @@ data "azurerm_virtual_network" "existing" {
   resource_group_name = "asksgt-rg-001"
 }
 
+data "azurerm_virtual_network_subnets" "existing" {
+  name                 = "kv"
+  virtual_network_name = data.azurerm_virtual_network.existing.vnet.name
+  resource_group_name  = data.azurerm_virtual_network.existing.vnet.resource_group_name
+}
+
 module "aks" {
   count             = var.containerizedAppServices ? 1 : 0
   source            = "./core/compute"
