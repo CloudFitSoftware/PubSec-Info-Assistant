@@ -21,19 +21,19 @@ resource "azurerm_resource_group" "rg" {
   tags     = local.tags
 }
 
-module "entraObjects" {
-  source                           = "./core/aad"
-  isInAutomation                   = var.isInAutomation
-  requireWebsiteSecurityMembership = var.requireWebsiteSecurityMembership
-  randomString                     = random_string.random.result
-  azure_websites_domain            = var.azure_websites_domain
-  aadWebClientId                   = var.aadWebClientId
-  aadMgmtClientId                  = var.aadMgmtClientId
-  aadMgmtServicePrincipalId        = var.aadMgmtServicePrincipalId
-  aadMgmtClientSecret              = var.aadMgmtClientSecret
-  containerizedAppServices         = var.containerizedAppServices
-  topLevelDomain                   = var.topLevelDomain
-}
+# module "entraObjects" {
+#   source                           = "./core/aad"
+#   isInAutomation                   = var.isInAutomation
+#   requireWebsiteSecurityMembership = var.requireWebsiteSecurityMembership
+#   randomString                     = random_string.random.result
+#   azure_websites_domain            = var.azure_websites_domain
+#   aadWebClientId                   = var.aadWebClientId
+#   aadMgmtClientId                  = var.aadMgmtClientId
+#   aadMgmtServicePrincipalId        = var.aadMgmtServicePrincipalId
+#   aadMgmtClientSecret              = var.aadMgmtClientSecret
+#   containerizedAppServices         = var.containerizedAppServices
+#   topLevelDomain                   = var.topLevelDomain
+# }
 
 module "logging" {
   source = "./core/logging/loganalytics"
@@ -186,13 +186,13 @@ module "backend" {
     ENABLE_MULTIMEDIA                     = var.enableMultimedia
     MAX_CSV_FILE_SIZE                     = var.maxCsvFileSize
     DISCONNECTED_AI                       = var.disconnectedAi
-    ENTRA_ID_CLIENT_ID                    = module.entraObjects.azure_ad_web_app_client_id
-    ENTRA_ID_CLIENT_SECRET                = module.entraObjects.azure_ad_web_app_secret
+    # ENTRA_ID_CLIENT_ID                    = module.entraObjects.azure_ad_web_app_client_id
+    # ENTRA_ID_CLIENT_SECRET                = module.entraObjects.azure_ad_web_app_secret
     AZURE_TENANT_ID                       = var.tenantId
     APP_DOMAIN                            = var.containerizedAppServices ? "https://infoasst.${random_string.random.result}.${var.topLevelDomain}" : "https://infoasst-web-${random_string.random.result}.${var.azure_websites_domain}"
   }
 
-  aadClientId = module.entraObjects.azure_ad_web_app_client_id
+  # aadClientId = module.entraObjects.azure_ad_web_app_client_id
   depends_on  = [module.kvModule]
 }
 
@@ -492,7 +492,7 @@ module "kvModule" {
   name                     = "infoasst-kv-${random_string.random.result}"
   location                 = var.location
   kvAccessObjectId         = data.azurerm_client_config.current.object_id
-  spClientSecret           = module.entraObjects.azure_ad_mgmt_app_secret
+  # spClientSecret           = module.entraObjects.azure_ad_mgmt_app_secret
   subscriptionId           = var.subscriptionId
   resourceGroupId          = azurerm_resource_group.rg.id
   resourceGroupName        = azurerm_resource_group.rg.name
