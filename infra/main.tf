@@ -534,6 +534,11 @@ data "azurerm_container_registry" "existing" {
   resource_group_name = var.acrResourceGroup
 }
 
+data "azurerm_virtual_network" "existing" {
+  name                = "az-vnet-genai-001"
+  resource_group_name = "asksgt-rg-001"
+}
+
 module "aks" {
   count             = var.containerizedAppServices ? 1 : 0
   source            = "./core/compute"
@@ -561,6 +566,18 @@ module "acr" {
   useExistingAcr    = var.useExistingAcr
   acrName           = var.acrName
   acrResourceGroup  = var.acrResourceGroup
+}
+
+module "KVRoleAssignmentVnet" {
+  count            = var.containerizedAppServices ? 1 : 0
+  source           = "./core/security/role"
+  scope            = module.kvModule[0].id
+  principalId      = data.azurerm_virtual_network.existing[0].id
+  principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
+  roleDefinitionId = local.azure_roles.KeyVaultAdministrator
+  subscriptionId   = var.subscriptionId
+  resourceGroupId  = azurerm_resource_group.rg.id
+  depends_on       = [module.kvModule]
 }
 
 module "ACRRoleAssignmentFunctions" {
@@ -605,3 +622,4 @@ module "PublicIP" {
   location          = var.location
   resourceGroupName = azurerm_resource_group.rg.name
 }
+
