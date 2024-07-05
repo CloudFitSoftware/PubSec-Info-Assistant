@@ -471,7 +471,7 @@ module "openAiRoleMgmt" {
   # When under automation and using an existing Azure OpenAI service, this will result in a duplicate assignment error.
   count            = var.useExistingAOAIService ? var.isInAutomation ? 0 : 1 : 1
   scope            = var.useExistingAOAIService ? data.azurerm_resource_group.existing[0].id : azurerm_resource_group.rg.id
-  principalId      = module.entraObjects.azure_ad_mgmt_sp_id
+  principalId      = ""
   roleDefinitionId = local.azure_roles.CognitiveServicesOpenAIUser
   principalType    = "ServicePrincipal"
   subscriptionId   = data.azurerm_client_config.current.subscription_id
