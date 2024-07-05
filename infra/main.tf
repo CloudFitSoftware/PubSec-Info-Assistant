@@ -534,16 +534,6 @@ data "azurerm_container_registry" "existing" {
   resource_group_name = var.acrResourceGroup
 }
 
-data "azurerm_virtual_network" "existing" {
-  name                = "az-vnet-genai-001"
-  resource_group_name = "asksgt-rg-001"
-}
-
-data "azurerm_subnet" "existing" {
-  name                 = "kv"
-  virtual_network_name = data.azurerm_virtual_network.existing.name
-  resource_group_name  = data.azurerm_virtual_network.existing.resource_group_name
-}
 
 module "aks" {
   count             = var.containerizedAppServices ? 1 : 0
