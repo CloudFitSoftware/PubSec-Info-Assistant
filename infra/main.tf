@@ -572,7 +572,7 @@ module "KVRoleAssignmentVnet" {
   count            = var.containerizedAppServices ? 1 : 0
   source           = "./core/security/role"
   scope            = module.kvModule[0].id
-  principalId      = data.azurerm_virtual_network.existing[0].id
+  principalId      = data.azurerm_virtual_network.existing.id
   principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
   roleDefinitionId = local.azure_roles.KeyVaultAdministrator
   subscriptionId   = var.subscriptionId
