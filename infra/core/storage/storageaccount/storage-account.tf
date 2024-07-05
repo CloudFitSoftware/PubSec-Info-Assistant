@@ -16,7 +16,7 @@ resource "azurerm_storage_account" "storage" {
   network_rules {
     default_action = "Deny"
     bypass         = ["AzureServices"]
-    virtual_network_subnet_ids = ["fee0260f-1521-4a6c-bdd7-b6eb86d43d2b"]
+    virtual_network_subnet_ids = ["/subscriptions/${var.subscriptionId}/resourceGroups/asksgt-rg-001/providers/Microsoft.Network/virtualNetworks/subnets/kv"]
   }
 
   tags = var.tags

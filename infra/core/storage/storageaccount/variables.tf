@@ -89,3 +89,7 @@ variable "resourceGroupName" {
 variable "keyVaultId" {
   type = string
 }
+
+variable "subscriptionId" {
+  type = string
+}

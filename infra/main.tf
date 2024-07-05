@@ -56,6 +56,7 @@ module "storage" {
   publicNetworkAccess   = true
   resourceGroupName     = azurerm_resource_group.rg.name
   keyVaultId            = module.kvModule.keyVaultId
+  subscriptionId        = var.subscriptionId
   deleteRetentionPolicy = {
     days = 7
   }
