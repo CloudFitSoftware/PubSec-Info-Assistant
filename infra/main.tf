@@ -382,7 +382,7 @@ module "video_indexer" {
   subscription_id                     = data.azurerm_client_config.current.subscription_id
   random_string                       = random_string.random.result
   tags                                = local.tags
-  azuread_service_principal_object_id = module.entraObjects.azure_ad_web_app_client_id
+  # azuread_service_principal_object_id = module.entraObjects.azure_ad_web_app_client_id
   arm_template_schema_mgmt_api        = var.arm_template_schema_mgmt_api
   video_indexer_api_version           = var.video_indexer_api_version
 }

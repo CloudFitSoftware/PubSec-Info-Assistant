@@ -244,13 +244,13 @@ output "TOP_LEVEL_DOMAIN" {
   value = var.topLevelDomain
 }
 
-output "ENTRA_ID_CLIENT_ID" {
-  value = module.entraObjects.azure_ad_web_app_client_id
-}
-output "ENTRA_ID_CLIENT_SECRET" {
-  value     = module.entraObjects.azure_ad_web_app_secret
-  sensitive = true
-}
+# output "ENTRA_ID_CLIENT_ID" {
+#   value = module.entraObjects.azure_ad_web_app_client_id
+# }
+# output "ENTRA_ID_CLIENT_SECRET" {
+#   value     = module.entraObjects.azure_ad_web_app_secret
+#   sensitive = true
+# }
 
 output "PUBLIC_IP_NAME" {
   value = module.PublicIP.PublicIpName
