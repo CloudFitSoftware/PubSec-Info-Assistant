@@ -44,3 +44,11 @@ variable "resourceGroupName" {
 variable "keyVaultId" {
   type = string
 }
+
+variable "virtualNetworkSubnetId" {
+  type = string
+}
+
+variable "whitelistedIps" {
+  type = set(string)
+}

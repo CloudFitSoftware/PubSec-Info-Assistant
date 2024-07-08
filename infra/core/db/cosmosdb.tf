@@ -44,6 +44,11 @@ resource "azurerm_cosmosdb_account" "cosmosdb_account" {
     max_staleness_prefix    = var.maxStalenessPrefix
   }
 
+  virtual_network_rule  {
+    id                = var.virtualNetworkSubnetId
+    ignore_missing_vnet_service_endpoint = false
+  }
+
   geo_location {
     location          = var.location
     failover_priority = 0

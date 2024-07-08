@@ -37,12 +37,6 @@ resource "azurerm_key_vault" "kv" {
 #   key_vault_id = azurerm_key_vault.kv.id
 # }
 
-resource "azurerm_key_vault_secret" "tlsKey" {
-  name         = "TLS-KEY"
-  value        = "placeholder"
-  key_vault_id = azurerm_key_vault.kv.id
-}
-
 output "keyVaultName" {
   value = azurerm_key_vault.kv.name
 }

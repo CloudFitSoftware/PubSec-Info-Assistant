@@ -93,3 +93,11 @@ variable "keyVaultId" {
 variable "subscriptionId" {
   type = string
 }
+
+variable "virtualNetworkSubnetId" {
+  type = string
+}
+
+variable "whitelistedIps" {
+  type = set(string)
+}

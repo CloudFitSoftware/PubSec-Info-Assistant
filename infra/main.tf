@@ -62,6 +62,9 @@ module "storage" {
   }
   containers = ["content", "website", "upload", "function", "logs", "config"]
   queueNames = ["pdf-submit-queue", "pdf-polling-queue", "non-pdf-submit-queue", "media-submit-queue", "text-enrichment-queue", "image-enrichment-queue", "embeddings-queue"]
+  virtualNetworkSubnetId = data.azurerm_subnet.existing.id
+  whitelistedIps = var.whitelistedIps
+  depends_on        = [module.KVRoleAssignmentTFUser, data.azurerm_virtual_network.existing]
 }
 
 module "enrichmentApp" {
@@ -114,7 +117,7 @@ module "enrichmentApp" {
     DISCONNECTED_AI                        = var.disconnectedAi
 
   }
-  depends_on = [module.kvModule]
+  depends_on = [module.kvModule, module.KVRoleAssignmentTFUser]
 }
 
 # // The application frontend
@@ -235,6 +238,7 @@ module "openaiServices" {
       }
     ]
   )
+  depends_on        = [module.KVRoleAssignmentTFUser]
 }
 
 module "formrecognizer" {
@@ -246,6 +250,7 @@ module "formrecognizer" {
   customSubDomainName = "infoasst-fr-${random_string.random.result}"
   resourceGroupName   = azurerm_resource_group.rg.name
   keyVaultId          = module.kvModule.keyVaultId
+  depends_on        = [module.KVRoleAssignmentTFUser]
 }
 
 module "cognitiveServices" {
@@ -256,6 +261,9 @@ module "cognitiveServices" {
   tags              = local.tags
   keyVaultId        = module.kvModule.keyVaultId
   resourceGroupName = azurerm_resource_group.rg.name
+  virtualNetworkSubnetId = data.azurerm_subnet.existing.id
+  whitelistedIps = var.whitelistedIps
+  depends_on        = [module.KVRoleAssignmentTFUser, data.azurerm_virtual_network.existing]
 }
 
 module "searchServices" {
@@ -271,6 +279,7 @@ module "searchServices" {
   resourceGroupName   = azurerm_resource_group.rg.name
   keyVaultId          = module.kvModule.keyVaultId
   azure_search_domain = var.azure_search_domain
+  depends_on        = [module.KVRoleAssignmentTFUser]
 }
 
 module "cosmosdb" {
@@ -283,6 +292,7 @@ module "cosmosdb" {
   logContainerName  = "statuscontainer"
   resourceGroupName = azurerm_resource_group.rg.name
   keyVaultId        = module.kvModule.keyVaultId
+  virtualNetworkSubnetId   = data.azurerm_subnet.existing.id
 }
 
 # // Function App 
@@ -521,6 +531,7 @@ module "bingSearch" {
   arm_template_schema_mgmt_api = var.arm_template_schema_mgmt_api
   keyVaultId                   = module.kvModule.keyVaultId
   enableWebChat                = var.enableWebChat
+  depends_on        = [module.KVRoleAssignmentTFUser]
 }
 
 // DEPLOYMENT OF AZURE CUSTOMER ATTRIBUTION TAG
