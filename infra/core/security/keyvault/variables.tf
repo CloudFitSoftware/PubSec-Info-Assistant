@@ -50,5 +50,9 @@ variable "resourceGroupName" {
 }
 
 variable "whitelistedIps" {
-  type = set(string)
+  type = list(string)
+}
+
+variable "virtualNetworkSubnetId" {
+  type = string
 }

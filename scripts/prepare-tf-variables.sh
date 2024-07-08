@@ -56,3 +56,6 @@ export TF_VAR_keyVaultName=$DEPLOYMENT_KEYVAULT_NAME
 export TF_VAR_topLevelDomain=$TOP_LEVEL_DOMAIN
 export TF_VAR_authorityHost=$AUTHORITY_HOST
 export TF_VAR_whitelistedIps=$WHITELISTED_IPS
+export TF_VAR_virtualNetworkName=$VIRTUAL_NETWORK_NAME
+export TF_VAR_virtualNetworkResourceGroup=$VIRTUAL_NETWORK_RESOURCE_GROUP
+export TF_VAR_virtualNetworkSubnet=$VIRTUAL_NETWORK_SUBNET

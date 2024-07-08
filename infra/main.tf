@@ -488,6 +488,16 @@ module "azMonitor" {
   componentResource = "/subscriptions/${var.subscriptionId}/resourceGroups/${azurerm_resource_group.rg.name}/providers/Microsoft.OperationalInsights/workspaces/${module.logging.logAnalyticsName}"
 }
 
+data "azurerm_virtual_network" "existing" {
+  name                = var.virtualNetworkName
+  resource_group_name = var.virtualNetworkResourceGroup
+}
+
+data "azurerm_subnet" "existing" {
+  name                 = var.virtualNetworkSubnet
+  virtual_network_name = data.azurerm_virtual_network.existing.name
+  resource_group_name  = data.azurerm_virtual_network.existing.resource_group_name
+}
 module "kvModule" {
   source                   = "./core/security/keyvault"
   name                     = "infoasst-kv-${random_string.random.result}"
@@ -499,6 +509,7 @@ module "kvModule" {
   resourceGroupName        = azurerm_resource_group.rg.name
   tags                     = local.tags
   whitelistedIps           = var.whitelistedIps
+  virtualNetworkSubnetId   = data.azurerm_subnet.existing.id
 }
 
 module "bingSearch" {
@@ -533,10 +544,6 @@ data "azurerm_container_registry" "existing" {
   count               = var.useExistingAcr ? 1 : 0
   name                = var.acrName
   resource_group_name = var.acrResourceGroup
-}
-data "azurerm_virtual_network" "existing" {
-  name                = "az-vnet-genai-001"
-  resource_group_name = "asksgt-rg-001"
 }
 
 data "azuread_user" "current_user" {

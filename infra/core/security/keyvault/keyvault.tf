@@ -1,16 +1,5 @@
 data "azurerm_client_config" "current" {}
 
-data "azurerm_virtual_network" "existing" {
-  name                = "az-vnet-genai-001"
-  resource_group_name = "asksgt-rg-001"
-}
-
-data "azurerm_subnet" "existing" {
-  name                 = "kv"
-  virtual_network_name = data.azurerm_virtual_network.existing.name
-  resource_group_name  = data.azurerm_virtual_network.existing.resource_group_name
-}
-
 resource "azurerm_key_vault" "kv" {
   name                            = var.name
   location                        = var.location
@@ -25,7 +14,7 @@ resource "azurerm_key_vault" "kv" {
   network_acls {
     default_action = "Deny"
     bypass         = "AzureServices"
-    virtual_network_subnet_ids = [data.azurerm_subnet.existing.id]
+    virtual_network_subnet_ids = [var.virtualNetworkSubnetId]
     ip_rules = var.whitelistedIps # adding ip for allow in firewall
   }
   access_policy {

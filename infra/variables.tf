@@ -575,3 +575,15 @@ variable "topLevelDomain" {
 variable "whitelistedIps" {
   type = set(string)
 }
+
+variable "virtualNetworkName" {
+  type = string
+}
+
+variable "virtualNetworkResourceGroup" {
+  type = string
+}
+
+variable "virtualNetworkSubnet" {
+  type = string
+}
