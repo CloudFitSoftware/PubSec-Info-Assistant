@@ -26,6 +26,7 @@ resource "azurerm_key_vault" "kv" {
     default_action = "Deny"
     bypass         = "AzureServices"
     virtual_network_subnet_ids = [data.azurerm_subnet.existing.id]
+    ip_rules = var.whitelistedIps # adding ip for allow in firewall
   }
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id

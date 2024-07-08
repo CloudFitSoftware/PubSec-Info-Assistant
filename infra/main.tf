@@ -498,6 +498,7 @@ module "kvModule" {
   resourceGroupId          = azurerm_resource_group.rg.id
   resourceGroupName        = azurerm_resource_group.rg.name
   tags                     = local.tags
+  whitelistedIps           = var.whitelistedIps
 }
 
 module "bingSearch" {
@@ -538,6 +539,10 @@ data "azurerm_virtual_network" "existing" {
   resource_group_name = "asksgt-rg-001"
 }
 
+data "azuread_user" "current_user" {
+  object_id = data.azurerm_client_config.current.object_id
+}
+
 module "aks" {
   count             = var.containerizedAppServices ? 1 : 0
   source            = "./core/compute"
@@ -567,11 +572,11 @@ module "acr" {
   acrResourceGroup  = var.acrResourceGroup
 }
 
-module "KVRoleAssignmentVnet" {
+module "KVRoleAssignmentTFUser" {
   count            = var.containerizedAppServices ? 1 : 0
   source           = "./core/security/role"
   scope            = module.kvModule.keyVaultId
-  principalId      = data.azurerm_virtual_network.existing.id
+  principalId      = data.azurerm_client_config.current.object_id
   principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
   roleDefinitionId = local.azure_roles.KeyVaultAdministrator
   subscriptionId   = var.subscriptionId
@@ -621,4 +626,3 @@ module "PublicIP" {
   location          = var.location
   resourceGroupName = azurerm_resource_group.rg.name
 }
-

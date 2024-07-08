@@ -571,3 +571,7 @@ variable "disconnectedAi" {
 variable "topLevelDomain" {
   type = string
 }
+
+variable "whitelistedIps" {
+  type = set(string)
+}
