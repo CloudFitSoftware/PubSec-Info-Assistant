@@ -557,10 +557,6 @@ data "azurerm_container_registry" "existing" {
   resource_group_name = var.acrResourceGroup
 }
 
-data "azuread_user" "current_user" {
-  object_id = data.azurerm_client_config.current.object_id
-}
-
 module "aks" {
   count             = var.containerizedAppServices ? 1 : 0
   source            = "./core/compute"

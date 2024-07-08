@@ -6,6 +6,7 @@ resource "azurerm_cognitive_account" "cognitiveService" {
   sku_name            = var.sku["name"]
   tags                = var.tags
   public_network_access_enabled = false
+  custom_subdomain_name = var.location
   network_acls {
     default_action = "Deny"
     ip_rules = var.whitelistedIps # adding ip for allow in firewall
