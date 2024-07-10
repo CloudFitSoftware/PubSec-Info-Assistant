@@ -8,6 +8,7 @@ from datetime import datetime
 from enum import Enum
 import zipfile
 import os
+from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from shared_code.utilities_helper import UtilitiesHelper
 from nltk.tokenize import sent_tokenize
@@ -85,9 +86,10 @@ class Utilities:
         """ Function to write a generic blob """
         # folder_set should be in the format of "<my_folder_name>/"
         # Get path and file name minus the root container
+        default_credential = DefaultAzureCredential()
         blob_service_client = BlobServiceClient(
             self.azure_blob_storage_endpoint,
-            self.azure_blob_storage_key)
+            default_credential)
         block_blob_client = blob_service_client.get_blob_client(
             container=output_container, blob=f'{folder_set}{output_filename}')
         block_blob_client.upload_blob(content, overwrite=True)
@@ -368,9 +370,10 @@ class Utilities:
         }
         # Get path and file name minus the root container
         file_name, file_extension, file_directory = self.get_filename_and_extension(myblob_name)
+        default_credential = DefaultAzureCredential()
         blob_service_client = BlobServiceClient(
             self.azure_blob_storage_endpoint,
-            self.azure_blob_storage_key)
+            default_credential)
         json_str = json.dumps(chunk_output, indent=2, ensure_ascii=False)
         block_blob_client = blob_service_client.get_blob_client(
             container=self.azure_blob_content_storage_container,

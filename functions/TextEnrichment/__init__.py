@@ -1,5 +1,6 @@
 import logging
 import azure.functions as func
+from azure.identity import DefaultAzureCredential
 from azure.storage.queue import QueueClient, TextBase64EncodePolicy
 from azure.storage.blob import BlobServiceClient
 from shared_code.utilities import Utilities
@@ -86,8 +87,9 @@ def main(msg: func.QueueMessage) -> None:
         chunk_folder_path = file_directory + file_name + file_extension
         
         # Detect language of the document
-        chunk_content = ''        
-        blob_service_client = BlobServiceClient.from_connection_string(azure_blob_connection_string)
+        chunk_content = ''
+        default_credential = DefaultAzureCredential()
+        blob_service_client = BlobServiceClient(azure_blob_storage_endpoint, credential=default_credential)
         container_client = blob_service_client.get_container_client(azure_blob_content_storage_container)
         # Iterate over the chunks in the container, retrieving up to the max number of chars required
         chunk_list = container_client.list_blobs(name_starts_with=chunk_folder_path)

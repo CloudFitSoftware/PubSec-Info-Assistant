@@ -51,7 +51,6 @@ from approaches.tabulardataassistant import (
 )
 from shared_code.status_log import State, StatusClassification, StatusLog
 from azure.cosmos import CosmosClient
-from shared_code.tags_helper import TagsHelper
 from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
 import weaviate
 from fastapi import FastAPI, Depends
@@ -232,10 +231,10 @@ else:
         index_name=AZURE_SEARCH_INDEX,
         credential=azure_search_key_credential,
     )
-blob_client = BlobServiceClient(
-    account_url=AZURE_BLOB_STORAGE_ENDPOINT,
-    credential=AZURE_BLOB_STORAGE_KEY,
-)
+
+default_credential = DefaultAzureCredential()
+blob_client = BlobServiceClient(AZURE_BLOB_STORAGE_ENDPOINT, credential=default_credential)
+
 blob_container = blob_client.get_container_client(AZURE_BLOB_STORAGE_CONTAINER)
 
 model_name = ''
