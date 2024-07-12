@@ -12,9 +12,9 @@ variable "random_string" {
 
 variable "tags" {}
 
-variable "azuread_service_principal_object_id" {
-  type = string
-}
+# variable "azuread_service_principal_object_id" {
+#   type = string
+# }
 
 variable "subscription_id" {
   type = string

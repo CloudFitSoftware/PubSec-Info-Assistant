@@ -125,13 +125,13 @@ resource "azurerm_linux_web_app" "app_service" {
   }
 
   auth_settings_v2 {
-    auth_enabled = true
+    auth_enabled = false
     default_provider = "azureactivedirectory"
     runtime_version = "~2"
     unauthenticated_action = "RedirectToLoginPage"
     require_https = true
     active_directory_v2{
-      client_id = var.aadClientId
+      client_id = "" # var.aadClientId
       login_parameters = {}
       tenant_auth_endpoint = "https://sts.windows.net/${var.tenantId}/v2.0"
       www_authentication_disabled  = false

@@ -25,11 +25,11 @@ resource "azurerm_key_vault" "kv" {
   }
 }
 
-resource "azurerm_key_vault_secret" "spClientKeySecret" {
-  name         = "AZURE-CLIENT-SECRET"
-  value        = var.spClientSecret
-  key_vault_id = azurerm_key_vault.kv.id
-}
+# resource "azurerm_key_vault_secret" "spClientKeySecret" {
+#   name         = "AZURE-CLIENT-SECRET"
+#   value        = var.spClientSecret
+#   key_vault_id = azurerm_key_vault.kv.id
+# }
 
 output "keyVaultName" {
   value = azurerm_key_vault.kv.name

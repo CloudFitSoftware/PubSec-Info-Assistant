@@ -39,10 +39,10 @@ variable "kvAccessObjectId" {
   type        = string
 }
 
-variable "spClientSecret" {
-  description = "The client secret for the service principal"
-  type        = string
-}
+# variable "spClientSecret" {
+#   description = "The client secret for the service principal"
+#   type        = string
+# }
 
 variable "resourceGroupName" {
   type    = string

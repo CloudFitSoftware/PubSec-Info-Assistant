@@ -21,17 +21,17 @@ resource "azurerm_resource_group" "rg" {
   tags     = local.tags
 }
 
-module "entraObjects" {
-  source                            = "./core/aad"
-  isInAutomation                    = var.isInAutomation
-  requireWebsiteSecurityMembership  = var.requireWebsiteSecurityMembership
-  randomString                      = random_string.random.result
-  azure_websites_domain             = var.azure_websites_domain
-  aadWebClientId                    = var.aadWebClientId
-  aadMgmtClientId                   = var.aadMgmtClientId
-  aadMgmtServicePrincipalId         = var.aadMgmtServicePrincipalId
-  aadMgmtClientSecret               = var.aadMgmtClientSecret
-}
+# module "entraObjects" {
+#   source                            = "./core/aad"
+#   isInAutomation                    = var.isInAutomation
+#   requireWebsiteSecurityMembership  = var.requireWebsiteSecurityMembership
+#   randomString                      = random_string.random.result
+#   azure_websites_domain             = var.azure_websites_domain
+#   aadWebClientId                    = var.aadWebClientId
+#   aadMgmtClientId                   = var.aadMgmtClientId
+#   aadMgmtServicePrincipalId         = var.aadMgmtServicePrincipalId
+#   aadMgmtClientSecret               = var.aadMgmtClientSecret
+# }
 
 module "logging" {
   source = "./core/logging/loganalytics"
@@ -183,7 +183,7 @@ module "backend" {
     MAX_CSV_FILE_SIZE                       = var.maxCsvFileSize
   }
 
-  aadClientId = module.entraObjects.azure_ad_web_app_client_id
+  # aadClientId = module.entraObjects.azure_ad_web_app_client_id
   depends_on = [ module.kvModule ]
 }
 
@@ -373,7 +373,7 @@ module "video_indexer" {
   subscription_id                     = data.azurerm_client_config.current.subscription_id
   random_string                       = random_string.random.result
   tags                                = local.tags
-  azuread_service_principal_object_id = module.entraObjects.azure_ad_web_app_client_id
+  # azuread_service_principal_object_id = module.entraObjects.azure_ad_web_app_client_id
   arm_template_schema_mgmt_api        = var.arm_template_schema_mgmt_api
   video_indexer_api_version           = var.video_indexer_api_version
 }
@@ -456,18 +456,18 @@ module "aviRoleBackend" {
 }
 
 # // MANAGEMENT SERVICE PRINCIPAL ROLES
-module "openAiRoleMgmt" {
-  source = "./core/security/role"
-  # If leveraging an existing Azure OpenAI service, only make this assignment if not under automation.
-  # When under automation and using an existing Azure OpenAI service, this will result in a duplicate assignment error.
-  count = var.useExistingAOAIService ? var.isInAutomation ? 0 : 1 : 1
-  scope = var.useExistingAOAIService ? data.azurerm_resource_group.existing[0].id : azurerm_resource_group.rg.id
-  principalId     = module.entraObjects.azure_ad_mgmt_sp_id
-  roleDefinitionId = local.azure_roles.CognitiveServicesOpenAIUser
-  principalType   = "ServicePrincipal"
-  subscriptionId   = data.azurerm_client_config.current.subscription_id
-  resourceGroupId  = azurerm_resource_group.rg.id
-}
+# module "openAiRoleMgmt" {
+#   source = "./core/security/role"
+#   # If leveraging an existing Azure OpenAI service, only make this assignment if not under automation.
+#   # When under automation and using an existing Azure OpenAI service, this will result in a duplicate assignment error.
+#   count = var.useExistingAOAIService ? var.isInAutomation ? 0 : 1 : 1
+#   scope = var.useExistingAOAIService ? data.azurerm_resource_group.existing[0].id : azurerm_resource_group.rg.id
+#   principalId     = module.entraObjects.azure_ad_mgmt_sp_id
+#   roleDefinitionId = local.azure_roles.CognitiveServicesOpenAIUser
+#   principalType   = "ServicePrincipal"
+#   subscriptionId   = data.azurerm_client_config.current.subscription_id
+#   resourceGroupId  = azurerm_resource_group.rg.id
+# }
 
 module "azMonitor" {
   source            = "./core/logging/monitor"
@@ -483,7 +483,7 @@ module "kvModule" {
   name              = "infoasst-kv-${random_string.random.result}"
   location          = var.location
   kvAccessObjectId  = data.azurerm_client_config.current.object_id 
-  spClientSecret    = module.entraObjects.azure_ad_mgmt_app_secret 
+  # spClientSecret    = module.entraObjects.azure_ad_mgmt_app_secret 
   subscriptionId    = var.subscriptionId
   resourceGroupId   = azurerm_resource_group.rg.id 
   resourceGroupName = azurerm_resource_group.rg.name
