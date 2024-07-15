@@ -8,6 +8,7 @@ import random
 import time
 from shared_code.status_log import StatusLog, State, StatusClassification
 import azure.functions as func
+from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, generate_blob_sas
 from azure.storage.queue import QueueClient, TextBase64EncodePolicy
 from azure.search.documents import SearchClient
@@ -16,7 +17,6 @@ from shared_code.utilities_helper import UtilitiesHelper
 from urllib.parse import unquote
 
 
-azure_blob_connection_string = os.environ["BLOB_CONNECTION_STRING"]
 cosmosdb_url = os.environ["COSMOSDB_URL"]
 cosmosdb_key = os.environ["COSMOSDB_KEY"]
 cosmosdb_log_database_name = os.environ["COSMOSDB_LOG_DATABASE_NAME"]
@@ -115,10 +115,8 @@ def main(myblob: func.InputStream):
         # as processing will overlay chunks, but if the new file version is smaller
         # than the old, then the residual old chunks will remain. The following
         # code handles this for PDF and non-PDF files.
-        blob_client = BlobServiceClient(
-            account_url=azure_blob_endpoint,
-            credential=azure_blob_key,
-        )
+        default_credential = DefaultAzureCredential()
+        blob_client = BlobServiceClient(azure_blob_endpoint, credential=default_credential)
         blob_container = blob_client.get_container_client(azure_blob_content_container)
         # List all blobs in the container that start with the name of the blob being processed
         # first remove the container prefix
