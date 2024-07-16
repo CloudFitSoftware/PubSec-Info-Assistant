@@ -106,12 +106,12 @@ AZURE_AI_TRANSLATION_DOMAIN = os.environ.get("AZURE_AI_TRANSLATION_DOMAIN") or "
 TARGET_TRANSLATION_LANGUAGE = os.environ.get("TARGET_TRANSLATION_LANGUAGE") or "en"
 BING_SEARCH_ENDPOINT = os.environ.get("BING_SEARCH_ENDPOINT") or "https://api.bing.microsoft.com"
 BING_SEARCH_KEY = os.environ.get("BING_SEARCH_KEY") or ""
-ENABLE_BING_SAFE_SEARCH = os.environ.get("ENABLE_BING_SAFE_SEARCH") or True
-ENABLE_WEB_CHAT = os.environ.get("ENABLE_WEB_CHAT") or False
-ENABLE_UNGROUNDED_CHAT = os.environ.get("ENABLE_UNGROUNDED_CHAT") or False
-ENABLE_MATH_ASSISTANT = os.environ.get("ENABLE_MATH_ASSISTANT") or False
-ENABLE_TABULAR_DATA_ASSISTANT = os.environ.get("ENABLE_TABULAR_DATA_ASSISTANT") or False
-ENABLE_MULTIMEDIA = os.environ.get("ENABLE_MULTIMEDIA") or False
+ENABLE_BING_SAFE_SEARCH = str_to_bool.get(os.environ.get("ENABLE_BING_SAFE_SEARCH").lower()) or True
+ENABLE_WEB_CHAT = str_to_bool.get(os.environ.get("ENABLE_WEB_CHAT").lower()) or False
+ENABLE_UNGROUNDED_CHAT = str_to_bool.get(os.environ.get("ENABLE_UNGROUNDED_CHAT").lower()) or False
+ENABLE_MATH_ASSISTANT = str_to_bool.get(os.environ.get("ENABLE_MATH_ASSISTANT").lower()) or False
+ENABLE_TABULAR_DATA_ASSISTANT = str_to_bool.get(os.environ.get("ENABLE_TABULAR_DATA_ASSISTANT").lower()) or False
+ENABLE_MULTIMEDIA = str_to_bool.get(os.environ.get("ENABLE_MULTIMEDIA").lower()) or False
 MAX_CSV_FILE_SIZE = os.environ.get("MAX_CSV_FILE_SIZE") or "7"
 
 #################### CF ENV vars for containerized deployment ####################
