@@ -2,6 +2,8 @@
 # FROM mcr.microsoft.com/azure-functions/python:4-python3.7-appservice
 FROM mcr.microsoft.com/azure-functions/python:4-python3.11
  
+ENV NLTK_DATA=/home/nltk_data
+
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
     AzureFunctionsJobHost__Logging__Console__IsEnabled=true
  
@@ -10,4 +12,8 @@ COPY ./functions /home/site/wwwroot
 RUN cd /home/site/wwwroot && \
   pip install --upgrade pip && \
   pip install -r requirements.txt && \
+  python -m nltk.downloader punkt && \
+  python -m nltk.downloader averaged_perceptron_tagger && \
+  # gpt-3.5-turbo and gpt-4 both download cl100k_base
+  python -c "import tiktoken; tiktoken.encoding_for_model('gpt-3.5-turbo')" && \
   cd --

@@ -61,7 +61,7 @@ then
 fi
 
 # Create our application configuration file before starting infrastructure
-${DIR}/configuration-create.sh
+# ${DIR}/configuration-create.sh
 
 # Initialise Terraform with the correct path
 ${DIR}/terraform-init.sh "$DIR/../infra/"

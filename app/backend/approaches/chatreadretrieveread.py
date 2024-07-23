@@ -2,6 +2,7 @@
 # Licensed under the MIT license.
 
 import re
+import os
 import logging
 import urllib.parse
 from datetime import datetime, timedelta
@@ -21,6 +22,8 @@ from azure.storage.blob import (
 from text import nonewlines
 from core.modelhelper import get_token_limit
 import requests
+from azure.identity import DefaultAzureCredential
+import json
 
 class ChatReadRetrieveReadApproach(Approach):
     """Approach that uses a simple retrieve-then-read implementation, using the Azure AI Search and
@@ -28,30 +31,39 @@ class ChatReadRetrieveReadApproach(Approach):
     then constructs a prompt with them, and then uses Azure OpenAI to generate
     an completion (answer) with that prompt."""
      
+    AZURE_BLOB_STORAGE_ENDPOINT = os.environ.get("AZURE_BLOB_STORAGE_ENDPOINT") 
+    AZURE_BLOB_STORAGE_CONFIG_CONTAINER = "config"
+    default_credential = DefaultAzureCredential()
+    blob_client = BlobServiceClient(AZURE_BLOB_STORAGE_ENDPOINT, credential=default_credential)
+    blob_container = blob_client.get_container_client(AZURE_BLOB_STORAGE_CONFIG_CONTAINER)
+    blob_name = "config.json"
+    blob = blob_container.get_blob_client(blob_name)
+    blob_data = blob.download_blob().readall()
+    config_data = json.loads(blob_data)
+    SYSTEM_MESSAGE_CHAT_CONVERSATION = config_data["SystemMessages"][0]["default"]
 
-
-    SYSTEM_MESSAGE_CHAT_CONVERSATION = """You are an Azure OpenAI Completion system. Your persona is {systemPersona} who helps answer questions about an agency's data. {response_length_prompt}
-    User persona is {userPersona} Answer ONLY with the facts listed in the list of sources below in {query_term_language} with citations.If there isn't enough information below, say you don't know and do not give citations. For tabular information return it as an html table. Do not return markdown format.
-    Your goal is to provide answers based on the facts listed below in the provided source documents. Avoid making assumptions,generating speculative or generalized information or adding personal opinions.
+    # SYSTEM_MESSAGE_CHAT_CONVERSATION = """You are an Azure OpenAI Completion system. Your persona is {systemPersona} who helps answer questions about an agency's data. {response_length_prompt}
+    # User persona is {userPersona} Answer ONLY with the facts listed in the list of sources below in {query_term_language} with citations.If there isn't enough information below, say you don't know and do not give citations. For tabular information return it as an html table. Do not return markdown format.
+    # Your goal is to provide answers based on the facts listed below in the provided source documents. Avoid making assumptions,generating speculative or generalized information or adding personal opinions.
    
-    Each source has content followed by a pipe character and the URL. Instead of writing the full URL, cite it using placeholders like [File1], [File2], etc., based on their order in the list. Do not combine sources; list each source URL separately, e.g., [File1] [File2].
-    Never cite the source content using the examples provided in this paragraph that start with info.
-    Sources:
-    - Content about topic A | info.pdf
-    - Content about topic B | example.txt
+    # Each source has content followed by a pipe character and the URL. Instead of writing the full URL, cite it using placeholders like [File1], [File2], etc., based on their order in the list. Do not combine sources; list each source URL separately, e.g., [File1] [File2].
+    # Never cite the source content using the examples provided in this paragraph that start with info.
+    # Sources:
+    # - Content about topic A | info.pdf
+    # - Content about topic B | example.txt
 
-    Reference these as [File1] and [File2] respectively in your answers.
+    # Reference these as [File1] and [File2] respectively in your answers.
 
-    Here is how you should answer every question:
+    # Here is how you should answer every question:
     
-    -Look for information in the source documents to answer the question in {query_term_language}.
-    -If the source document has an answer, please respond with citation.You must include a citation to each document referenced only once when you find answer in source documents.      
-    -If you cannot find answer in below sources, respond with I am not sure.Do not provide personal opinions or assumptions and do not include citations.
-    -Identify the language of the user's question and translate the final response to that language.if the final answer is " I am not sure" then also translate it to the language of the user's question and then display translated response only. nothing else.
+    # -Look for information in the source documents to answer the question in {query_term_language}.
+    # -If the source document has an answer, please respond with citation.You must include a citation to each document referenced only once when you find answer in source documents.      
+    # -If you cannot find answer in below sources, respond with I am not sure.Do not provide personal opinions or assumptions and do not include citations.
+    # -Identify the language of the user's question and translate the final response to that language.if the final answer is " I am not sure" then also translate it to the language of the user's question and then display translated response only. nothing else.
 
-    {follow_up_questions_prompt}
-    {injected_prompt}
-    """
+    # {follow_up_questions_prompt}
+    # {injected_prompt}
+    # """
 
     FOLLOW_UP_QUESTIONS_PROMPT_CONTENT = """ALWAYS generate three very brief unordered follow-up questions surrounded by triple chevrons (<<<Are there exclusions for prescriptions?>>>) that the user would likely ask next about their agencies data. 
     Surround each follow-up question with triple chevrons (<<<Are there exclusions for prescriptions?>>>). Try not to repeat questions that have already been asked.

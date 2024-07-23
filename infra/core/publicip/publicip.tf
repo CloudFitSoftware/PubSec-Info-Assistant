@@ -6,6 +6,7 @@ resource "azurerm_public_ip" "address" {
   tags = {
     environment = "Production"
   }
+  sku = "Standard"
 }
 
 output "PublicIpAddress" {

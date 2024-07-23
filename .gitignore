@@ -396,4 +396,3 @@ terraform.tfstate
 terraform.tfstate.d
 .tfplan.txt
 infra/infoasst*
-infra/sp_config/config.json
