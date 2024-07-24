@@ -15,23 +15,27 @@ from nltk.tokenize import sent_tokenize
 import tiktoken
 import nltk
 from bs4 import BeautifulSoup
+
 # Try to download using nltk.download
-## TODO: This was done to support containers with no outbound access.  This has the potential
-## to break non-container deployments.  Need logic
-# nltk.download('punkt')
+# in functions container, NLTK_DATA = "/home/nltk_data"
+# TODO: Future state - have build scripts/pipeline download punkt for non-containerized deployments
+# so that it is part of the payload rather than trying to source it at run-time where there may be
+# instances that there is no out-bound connectivity.  If there is no out-bound connectivity, then
+# this will fail as a non-container
+if not os.path.exists("/home/nltk_data"):
+    nltk.download('punkt')
+    punkt_dir = os.path.join(nltk.data.path[0], 'tokenizers/punkt')
 
-# punkt_dir = os.path.join(nltk.data.path[0], 'tokenizers/punkt')
+    # Check if the 'punkt' directory exists
+    if not os.path.exists(punkt_dir):
+        punkt_zip_path = os.path.join(nltk.data.path[0], 'tokenizers/punkt.zip')
 
-# # Check if the 'punkt' directory exists
-# if not os.path.exists(punkt_dir):
-#     punkt_zip_path = os.path.join(nltk.data.path[0], 'tokenizers/punkt.zip')
-
-#     # If the 'punkt.zip' file exists, unzip it
-#     if os.path.exists(punkt_zip_path):
-#         with zipfile.ZipFile(punkt_zip_path, 'r') as zip_ref:
-#             zip_ref.extractall(os.path.join(nltk.data.path[0], 'tokenizers/'))
-#     else:
-#         raise Exception("Failed to download 'punkt' package")
+        # If the 'punkt.zip' file exists, unzip it
+        if os.path.exists(punkt_zip_path):
+            with zipfile.ZipFile(punkt_zip_path, 'r') as zip_ref:
+                zip_ref.extractall(os.path.join(nltk.data.path[0], 'tokenizers/'))
+        else:
+            raise Exception("Failed to download 'punkt' package")
 
 class ParagraphRoles(Enum):
     """ Enum to define the priority of paragraph roles """
