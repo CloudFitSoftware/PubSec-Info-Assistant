@@ -597,6 +597,30 @@ module "NetworkContributorRole" {
   depends_on       = [module.aks]
 }
 
+module "aksAgentPoolStorageContributor" {
+  count            = var.containerizedAppServices ? 1 : 0
+  source           = "./core/security/role"
+  scope            = azurerm_resource_group.rg.id
+  principalId      = module.aks[0].kubletId
+  principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
+  roleDefinitionId = local.azure_roles.StorageBlobDataContributor
+  subscriptionId   = var.subscriptionId
+  resourceGroupId  = azurerm_resource_group.rg.id
+  depends_on       = [module.aks]
+}
+
+module "aksAgentPoolStorageReader" {
+  count            = var.containerizedAppServices ? 1 : 0
+  source           = "./core/security/role"
+  scope            = azurerm_resource_group.rg.id
+  principalId      = module.aks[0].kubletId
+  principalType    = "ServicePrincipal" # Default is set in the module, change if necessary
+  roleDefinitionId = local.azure_roles.StorageBlobDataReader
+  subscriptionId   = var.subscriptionId
+  resourceGroupId  = azurerm_resource_group.rg.id
+  depends_on       = [module.aks]
+}
+
 module "PublicIP" {
   source            = "./core/publicip"
   name              = "infoasst-ip"

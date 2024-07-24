@@ -34,7 +34,6 @@ max_submit_requeue_count = int(os.environ["MAX_SUBMIT_REQUEUE_COUNT"])
 poll_queue_submit_backoff = int(os.environ["POLL_QUEUE_SUBMIT_BACKOFF"])
 pdf_submit_queue_backoff = int(os.environ["PDF_SUBMIT_QUEUE_BACKOFF"])
 
-
 utilities = Utilities(
     azure_blob_storage_account,
     azure_blob_storage_endpoint,
