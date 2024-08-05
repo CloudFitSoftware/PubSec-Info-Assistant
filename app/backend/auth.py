@@ -1,9 +1,9 @@
 import msal
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, Response, HTTPException
 from fastapi.responses import RedirectResponse
 from azure.identity import AzureAuthorityHosts
 import os
-
+import json
 #### ENV VARS ##########################
 
 # AZURE_AUTHORITY_HOST = os.environ.get("AZURE_AUTHORITY_HOST") or "AzureCloud"
@@ -34,9 +34,12 @@ msal_app = msal.ConfidentialClientApplication(
 )
 
 @router.get("/login")
-async def login():
+async def login(request: Request):
+    next_url = request.query_params.get("next", "/home")
     auth_url = msal_app.get_authorization_request_url(scope, redirect_uri=redirect_uri)
-    return RedirectResponse(auth_url)
+    response = RedirectResponse(auth_url)
+    response.set_cookie(key="next_url", value=next_url, httponly=True, secure=True)
+    return response
 
 @router.get("/callback")
 async def callback(request: Request):
@@ -56,9 +59,11 @@ async def callback(request: Request):
     account = result.get("id_token_claims", {})
     access_token = result.get("access_token")
 
+    next_url = request.cookies.get("next_url", "/home")
+
     # Store the access token in a cookie
-    response = RedirectResponse(url="/home")
-    response.set_cookie(key="access_token", value=access_token, httponly=True,secure=True)
+    response = RedirectResponse(url=next_url)
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True)
     response.set_cookie(key="account", value=account, httponly=True, secure=True)
     
     return response
@@ -68,11 +73,12 @@ async def logout(request: Request):
     response = RedirectResponse(url="/")
     response.delete_cookie("access_token")
     response.delete_cookie("account")
+    response.delete_cookie("next_url")
     return response
 
 EXCLUDE_PATHS = {"/auth/login", "/auth/callback", "/auth/logout"}
 
-def get_current_user(request: Request):
+def get_current_user(request: Request, response: Response):
     if request.url.path not in EXCLUDE_PATHS:
         token = request.cookies.get("access_token")
         account = request.cookies.get("account")
@@ -86,6 +92,21 @@ def get_current_user(request: Request):
         result = msal_app.acquire_token_silent(scope, account=accounts[0])
         if not result:
             raise HTTPException(status_code=401, detail="Invalid token")
+    
+        if result.get("access_token") != token:
+            response.set_cookie(key="access_token", value=result["access_token"], httponly=True, secure=True)
 
         return result
     return None
+
+def get_current_user_data(request: Request):
+    access_token = request.cookies.get("access_token")
+    account = json.loads(request.cookies.get("account").replace("'", '"'))
+    if access_token and account:
+        result = {
+            "access_token": access_token,
+            "oid": account["oid"]
+            }
+    else:
+        result = None
+    return result

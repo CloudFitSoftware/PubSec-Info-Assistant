@@ -59,7 +59,7 @@ module "storage" {
   deleteRetentionPolicy = {
     days = 7
   }
-  containers = ["content", "website", "upload", "function", "logs", "config"]
+  containers = ["content", "website", "upload", "function", "logs", "config", "assets"]
   queueNames = ["pdf-submit-queue", "pdf-polling-queue", "non-pdf-submit-queue", "media-submit-queue", "text-enrichment-queue", "image-enrichment-queue", "embeddings-queue"]
 }
 

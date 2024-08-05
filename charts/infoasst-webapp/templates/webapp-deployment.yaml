@@ -101,6 +101,22 @@ spec:
             value: "{{ .Values.webapp.env.appDomain }}"
           - name: AZURE_OPENAI_AUTHORITY_HOST
             value: "{{ .Values.webapp.env.authorityHost }}"
+          - name: ENABLE_BING_SAFE_SEARCH
+            value: "{{ .Values.webapp.env.enableBingSafeSearch }}"
+          - name: ENABLE_WEB_CHAT
+            value: "{{ .Values.webapp.env.enableWebChat }}"
+          - name: ENABLE_UNGROUNDED_CHAT
+            value: "{{ .Values.webapp.env.enableUngroundedChat }}"
+          - name: ENABLE_MATH_ASSISTANT
+            value: "{{ .Values.webapp.env.enableMathAssistant }}"
+          - name: ENABLE_TABULAR_DATA_ASSISTANT
+            value: "{{ .Values.webapp.env.enableTabularDataAssistant }}"
+          - name: ENABLE_MULTIMEDIA
+            value: "{{ .Values.webapp.env.enableMultiMedia }}"
+          - name: ADMIN_GROUP_NAME
+            value: "{{ .Values.webapp.env.adminGroupName }}"
+          - name: USER_GROUP_NAME
+            value: "{{ .Values.webapp.env.userGroupName }}"
         resources:
           limits:
             memory: "4G"

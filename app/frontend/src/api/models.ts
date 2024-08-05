@@ -217,3 +217,34 @@ export type GetFeatureFlagsResponse = {
     ENABLE_MULTIMEDIA: boolean;
     error?: string;
 }
+
+export type GetRoleResponse = {
+    ADMIN: boolean;
+    USER: boolean;
+    error?: string;
+}
+
+export type ExampleModel = {
+    text: string;
+    value: string;
+};
+
+export type GetExamplePromptResponse = {
+    PROMPTS: ExampleModel[];
+    error?: string;
+};
+
+export type GetPlaceholderResponse = {
+    PLACEHOLDER: string;
+    error?: string;
+};
+
+export type GetMiddleBannerResponse = {
+    MIDDLEBANNER: string;
+    error?: string;
+};
+
+export type GetAnswerLabelResponse = {
+    ANSWERLABEL: string;
+    error?: string;
+};

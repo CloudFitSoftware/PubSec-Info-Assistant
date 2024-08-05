@@ -11,7 +11,7 @@ import styles from "./Chat.module.css";
 import rlbgstyles from "../../components/ResponseLengthButtonGroup/ResponseLengthButtonGroup.module.css";
 import rtbgstyles from "../../components/ResponseTempButtonGroup/ResponseTempButtonGroup.module.css";
 
-import { chatApi, Approaches, ChatResponse, ChatRequest, ChatTurn, ChatMode, getFeatureFlags, GetFeatureFlagsResponse } from "../../api";
+import { chatApi, Approaches, ChatResponse, ChatRequest, ChatTurn, ChatMode, getFeatureFlags, GetFeatureFlagsResponse, fetchImage, getPlaceholder, getMiddleBanner } from "../../api";
 import { Answer, AnswerError, AnswerLoading } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
 import { ExampleList } from "../../components/Example";
@@ -299,6 +299,58 @@ const Chat = () => {
         };
     }, []);
 
+    const [imageSrc, setImageSrc] = useState<string | null>(null);
+    const [imageisLoading, setImageIsLoading] = useState(true);
+    useEffect(() => {
+        async function getImage() {
+            const imageUrl = await fetchImage();
+            if (imageUrl) {
+                const img = new Image();
+                img.src = imageUrl as string; // Type assertion to ensure imageUrl is treated as a string
+                img.onload = () => {
+                    setImageSrc(imageUrl);
+                    setImageIsLoading(false);
+                };
+            } else {
+                setImageIsLoading(false);
+            }
+        }
+    
+        getImage();
+    }, []);
+
+    const [placeholder, setPlaceholder] = useState("Loading...");
+
+    useEffect(() => {
+        async function fetchPlaceholder() {
+            try {
+                const response = await getPlaceholder();
+                setPlaceholder(response.PLACEHOLDER);
+            } catch (error) {
+                console.error("Error fetching placeholder:", error);
+                setPlaceholder("Failed to load placeholder");
+            }
+        }
+
+        fetchPlaceholder();
+    }, []);
+
+    const [middlebanner, setMiddleBanner] = useState("Loading...");
+
+    useEffect(() => {
+        async function fetchMiddleBanner() {
+            try {
+                const response = await getMiddleBanner();
+                setMiddleBanner(response.MIDDLEBANNER);
+            } catch (error) {
+                console.error("Error fetching middle banner:", error);
+                setMiddleBanner("Failed to load middle banner");
+            }
+        }
+
+        fetchMiddleBanner();
+    }, []);
+    
     return (
         <div className={styles.container}>
             <div className={styles.subHeader}>
@@ -315,10 +367,14 @@ const Chat = () => {
                         <div className={styles.chatEmptyState}>
                             {activeChatMode == ChatMode.WorkOnly ? 
                                 <div>
-                                    <div className={styles.chatEmptyStateHeader}> 
-                                        <BuildingMultipleFilled fontSize={"100px"} primaryFill={"rgba(27, 74, 239, 1)"} aria-hidden="true" aria-label="Chat with your Work Data logo" />
-                                        </div>
-                                    <h1 className={styles.chatEmptyStateTitle}>Chat with your work data</h1>
+                                    <div className={styles.chatEmptyStateHeader}>
+                                        {!imageisLoading && imageSrc ? (
+                                            <img src={imageSrc} style={{ width: '100px', height: 'auto' }} />
+                                        ) : (
+                                            <BuildingMultipleFilled fontSize={"100px"} primaryFill={"rgba(27, 74, 239, 1)"} aria-hidden="true" aria-label="Chat with your Work Data logo" />
+                                        )}
+                                    </div>
+                                    <h1 className={styles.chatEmptyStateTitle}>{middlebanner}</h1>
                                 </div>
                             : activeChatMode == ChatMode.WorkPlusWeb ?
                                 <div>
@@ -409,7 +465,7 @@ const Chat = () => {
                         )}
                         <QuestionInput
                             clearOnSend
-                            placeholder="Type a new question (e.g. Who are Microsoft's top executives, provided as a table?)"
+                            placeholder={placeholder}
                             disabled={isLoading}
                             onSend={question => makeApiRequest(question, defaultApproach, {}, {}, {})}
                             onAdjustClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)}
