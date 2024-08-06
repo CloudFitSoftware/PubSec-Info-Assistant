@@ -571,3 +571,13 @@ variable "disconnectedAi" {
 variable "topLevelDomain" {
   type = string
 }
+
+variable "adminGroupName" {
+  type = string
+  default = ""
+}
+
+variable "userGroupName" {
+  type = string
+  default = ""
+}

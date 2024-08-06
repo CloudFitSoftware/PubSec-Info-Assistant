@@ -9,8 +9,12 @@ COPY webapp/ /webapp
 RUN pip3 install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install gunicorn
-# gpt-3.5-turbo and gpt-4 both download cl100k_base
-RUN python -c "import tiktoken; tiktoken.encoding_for_model('gpt-3.5-turbo')"
+
+RUN mkdir /opt/tiktoken_cache
+ARG TIKTOKEN_URL="https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken"
+RUN wget -O /opt/tiktoken_cache/$(echo -n $TIKTOKEN_URL | sha1sum | head -c 40) $TIKTOKEN_URL
+
+ENV TIKTOKEN_CACHE_DIR=/opt/tiktoken_cache
 
 EXPOSE 5050
 CMD gunicorn -w 4 --timeout 300 --bind 0.0.0.0:5050 -k uvicorn.workers.UvicornWorker app:app --threads 100

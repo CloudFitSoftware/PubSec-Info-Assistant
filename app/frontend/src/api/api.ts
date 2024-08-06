@@ -16,6 +16,11 @@ import { ChatResponse,
     DeleteItemRequest,
     ResubmitItemRequest,
     GetFeatureFlagsResponse,
+    GetRoleResponse,
+    GetExamplePromptResponse,
+    GetPlaceholderResponse,
+    GetMiddleBannerResponse,
+    GetAnswerLabelResponse,
     getMaxCSVFileSizeType,
     } from "./models";
 
@@ -500,5 +505,100 @@ export async function getFeatureFlags(): Promise<GetFeatureFlagsResponse> {
         throw Error(parsedResponse.error || "Unknown error");
     }
     console.log(parsedResponse);
+    return parsedResponse;
+}
+
+export async function getUserRole(): Promise<GetRoleResponse> {
+    const response = await fetch("/role", {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    const parsedResponse: GetRoleResponse = await response.json();
+    if (response.status > 299 || !response.ok) {
+        console.log(response);
+        throw Error(parsedResponse.error || "Unknown error");
+    }
+    console.log(parsedResponse);
+    return parsedResponse;
+}
+
+export async function getExamplePrompts(): Promise<GetExamplePromptResponse> {
+    const response = await fetch("/exampleprompts", {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    const parsedResponse: GetExamplePromptResponse = await response.json();
+    if (response.status > 299 || !response.ok) {
+        console.log(response);
+        throw Error(parsedResponse.error || "Unknown error");
+    }
+    return parsedResponse;
+}
+
+export async function fetchImage() {
+    try {
+        const response = await fetch('/getassets');
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const imageBlob = await response.blob();
+        if (!imageBlob || imageBlob.size === 0) {
+            throw new Error("Received an empty image blob");
+        }
+
+        const imageObjectURL = URL.createObjectURL(imageBlob);
+        return imageObjectURL;
+    } catch (error) {
+        console.error("Failed to fetch the image:", error);
+        return null;  
+    }
+}
+
+export async function getPlaceholder(): Promise<GetPlaceholderResponse> {
+    const response = await fetch("/getplaceholder", {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    const parsedResponse: GetPlaceholderResponse = await response.json();
+    if (response.status > 299 || !response.ok) {
+        console.log(response);
+        throw Error(parsedResponse.error || "Unknown error");
+    }
+    return parsedResponse;
+}
+
+export async function getMiddleBanner(): Promise<GetMiddleBannerResponse> {
+    const response = await fetch("/getmiddlebanner", {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    const parsedResponse: GetMiddleBannerResponse = await response.json();
+    if (response.status > 299 || !response.ok) {
+        console.log(response);
+        throw Error(parsedResponse.error || "Unknown error");
+    }
+    return parsedResponse;
+}
+
+export async function getAnswerLabel(): Promise<GetAnswerLabelResponse> {
+    const response = await fetch("/getanswerlabel", {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    const parsedResponse: GetAnswerLabelResponse = await response.json();
+    if (response.status > 299 || !response.ok) {
+        console.log(response);
+        throw Error(parsedResponse.error || "Unknown error");
+    }
     return parsedResponse;
 }

@@ -57,12 +57,16 @@ from fastapi import FastAPI, Depends
 from auth import router as auth_router, get_current_user
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+import requests
+from auth import get_current_user_data
+import io
 # === ENV Setup ===
 
 str_to_bool = {'true': True, 'false': False}
 # Replace these with your own values, either in environment variables or directly here
 AZURE_BLOB_STORAGE_ACCOUNT = (os.environ.get("AZURE_BLOB_STORAGE_ACCOUNT") or "mystorageaccount")
 AZURE_BLOB_STORAGE_ENDPOINT = os.environ.get("AZURE_BLOB_STORAGE_ENDPOINT") 
+AZURE_BLOB_STORAGE_CONFIG_CONTAINER = "config"
 AZURE_BLOB_STORAGE_CONTAINER = (os.environ.get("AZURE_BLOB_STORAGE_CONTAINER") or "content")
 AZURE_BLOB_STORAGE_UPLOAD_CONTAINER = (os.environ.get("AZURE_BLOB_STORAGE_UPLOAD_CONTAINER") or "upload")
 AZURE_KEYVAULT_NAME = os.environ.get("AZURE_KEYVAULT_NAME") or ""
@@ -113,7 +117,10 @@ ENABLE_MATH_ASSISTANT = str_to_bool.get(os.environ.get("ENABLE_MATH_ASSISTANT").
 ENABLE_TABULAR_DATA_ASSISTANT = str_to_bool.get(os.environ.get("ENABLE_TABULAR_DATA_ASSISTANT").lower()) or False
 ENABLE_MULTIMEDIA = str_to_bool.get(os.environ.get("ENABLE_MULTIMEDIA").lower()) or False
 MAX_CSV_FILE_SIZE = os.environ.get("MAX_CSV_FILE_SIZE") or "7"
-
+ADMIN_GROUP_ID = os.environ.get("ADMIN_GROUP_ID")
+USER_GROUP_ID = os.environ.get("USER_GROUP_ID")
+AZURE_BLOB_STORAGE_ASSETS_CONTAINER = os.environ.get("AZURE_BLOB_STORAGE_ASSETS_CONTAINER", "assets")
+CUSTOM_ICON_NAME = os.environ.get("CUSTOM_ICON_NAME", "image.svg.png")
 #################### CF ENV vars for containerized deployment ####################
 WEAVIATE_URL = os.environ.get("WEAVIATE_URL", "") 
 WEAVIATE_INDEX_NAME = os.environ.get("WEAVIATE_INDEX", "WEAVIATE")
@@ -134,8 +141,10 @@ kv_uri = AZURE_KEYVAULT_NAME
 
 if AZURE_OPENAI_AUTHORITY_HOST == "AzureUSGovernment":
     AUTHORITY = AzureAuthorityHosts.AZURE_GOVERNMENT
+    URL_ENDING = "us"
 else:
     AUTHORITY = AzureAuthorityHosts.AZURE_PUBLIC_CLOUD
+    URL_ENDING = "com"
 
 azure_credential = DefaultAzureCredential(authority=AUTHORITY)
 
@@ -381,10 +390,88 @@ app.include_router(auth_router, prefix="/auth")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+@app.get("/role")
+async def get_rbac_role(request: Request):
+    user_info = get_current_user_data(request)
+    headers = {
+        'Authorization': f'Bearer {user_info["access_token"]}',
+        'Content-Type': 'application/json'
+    }
+    
+    response = requests.get(
+        f"https://graph.microsoft.{URL_ENDING}/v1.0/users/{user_info['oid']}/memberOf",
+        headers=headers
+    ).json()['value']
+
+    ids = [item["id"] for item in response]
+    
+    return {
+        "ADMIN": ADMIN_GROUP_ID in ids,
+        "USER": USER_GROUP_ID in ids
+    }
+
+
+def get_customizations_data(container_name: str, blob_name: str):
+    default_credential = DefaultAzureCredential()
+    blob_client = BlobServiceClient(AZURE_BLOB_STORAGE_ENDPOINT, credential=default_credential)
+    blob_container = blob_client.get_container_client(container_name)
+    blob = blob_container.get_blob_client(blob_name)
+    blob_data = blob.download_blob().readall()
+    return blob_data
+
+@app.get("/exampleprompts")
+async def get_example_prompts():
+    try:
+        blob_data = get_customizations_data(AZURE_BLOB_STORAGE_CONFIG_CONTAINER, "config.json")
+        config_data = json.loads(blob_data)
+        example_prompts = config_data["ExamplePrompts"]
+        return {"PROMPTS": example_prompts}
+    except:
+        return {"PROMPTS": None}
+
+@app.get("/getassets")
+async def get_assets():
+    try:
+        blob_data = get_customizations_data(AZURE_BLOB_STORAGE_ASSETS_CONTAINER, CUSTOM_ICON_NAME)
+        return StreamingResponse(io.BytesIO(blob_data), media_type="image/jpeg")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+@app.get("/getplaceholder")
+async def get_placeholder():
+    try:
+        blob_data = get_customizations_data(AZURE_BLOB_STORAGE_CONFIG_CONTAINER, "config.json")
+        config_data = json.loads(blob_data)
+        placeholder = config_data["Placeholder"][0]['default']
+        return {"PLACEHOLDER": placeholder}
+    except:
+        return {"PLACEHOLDER": None}
+    
+@app.get("/getmiddlebanner")
+async def get_middle_banner():
+    try:
+        blob_data = get_customizations_data(AZURE_BLOB_STORAGE_CONFIG_CONTAINER, "config.json")
+        config_data = json.loads(blob_data)
+        placeholder = config_data["MiddleBanner"][0]['default']
+        return {"MIDDLEBANNER": placeholder}
+    except:
+        return {"MIDDLEBANNER": None}
+    
+@app.get("/getanswerlabel")
+async def get_answer_label():
+    try:
+        blob_data = get_customizations_data(AZURE_BLOB_STORAGE_CONFIG_CONTAINER, "config.json")
+        config_data = json.loads(blob_data)
+        placeholder = config_data["AnswerLabel"][0]['default']
+        return {"ANSWERLABEL": placeholder}
+    except:
+        return {"ANSWERLABEL": None}
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     if exc.status_code == 401:
-        return RedirectResponse(url="/auth/login")
+        original_url = str(request.url.path) + '?' + str(request.url.query) if request.url.query else str(request.url.path)
+        return RedirectResponse(url=f"/auth/login?next={original_url}")
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 @app.get("/", include_in_schema=False, response_class=RedirectResponse)

@@ -259,3 +259,11 @@ output "PUBLIC_IP_NAME" {
 output "APP_DOMAIN" {
   value = var.containerizedAppServices ? "https://infoasst.${random_string.random.result}.${var.topLevelDomain}" : "https://infoasst-web-${random_string.random.result}.${var.azure_websites_domain}"
 }
+
+output "ADMIN_GROUP_NAME" {
+  value = var.adminGroupName
+}
+
+output "USER_GROUP_NAME" {
+  value = var.userGroupName
+}
